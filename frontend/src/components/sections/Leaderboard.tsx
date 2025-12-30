@@ -1,6 +1,6 @@
 import React from "react";
-import Container from "@/components/layout/Container";
-import SectionTitle from "@/components/layout/SectionTitle";
+import Container from "../../components/layout/Container";
+import SectionTitle from "../../components/layout/SectionTitle";
 
 export const Leaderboard: React.FC = () => {
   const drivers = [

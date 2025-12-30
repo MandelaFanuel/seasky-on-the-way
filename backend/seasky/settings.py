@@ -21,8 +21,14 @@ sys.path.insert(0, str(BASE_DIR / "apps"))
 
 # ========================= ENVIRONMENT LOADING =========================
 ENV_FILE = BASE_DIR / ".env"
-if ENV_FILE.exists():
-    load_dotenv(ENV_FILE, override=True)
+
+# Render injecte les variables d'environnement au runtime.
+# Il ne faut JAMAIS écraser ces variables en prod.
+IS_RENDER = bool(os.getenv("RENDER")) or bool(os.getenv("RENDER_SERVICE_ID"))
+
+if ENV_FILE.exists() and not IS_RENDER:
+    load_dotenv(ENV_FILE, override=False) 
+
 
 # ========================= HELPERS =========================
 def _split_csv(env_value: str) -> list[str]:

@@ -1,5 +1,5 @@
 // ========================= src/services/qr.service.ts =========================
-import api from "@/services/api";
+import api from "./api";
 
 /**
  * QR module endpoints (à adapter si tes routes backend diffèrent)

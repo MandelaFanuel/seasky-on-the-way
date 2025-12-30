@@ -10,7 +10,7 @@ import {
   BOUTIQUE_TYPE_VALUES,
   DELIVERY_VEHICLE_VALUES,
   BUSINESS_ENTITY_TYPE_VALUES,
-} from '@/pages/constants/formOptions.constants';
+} from '../../pages/constants/formOptions.constants';
 
 // ==================== TYPES DE BASE ====================
 export interface SelectOption {

@@ -19,7 +19,7 @@ import {
 } from "@mui/material";
 import { Store, LocationOn, Person, Numbers } from "@mui/icons-material";
 
-import { listAgents, Agent } from "@/services/agents.service";
+import { listAgents, Agent } from "../../../services/agents.service";
 
 type Props = {
   open: boolean;

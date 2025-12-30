@@ -61,7 +61,7 @@ import {
 } from "@mui/icons-material";
 
 import AgentForm from "../agents/AgentForm";
-import { createAgent, listAgents, Agent } from "@/services/agents.service";
+import { createAgent, listAgents, Agent } from "../../../services/agents.service";
 
 // StatCard (même style que tes dashboards)
 const StatCard = ({

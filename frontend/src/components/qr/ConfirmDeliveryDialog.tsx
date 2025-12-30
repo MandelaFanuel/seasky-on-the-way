@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from "react";
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Alert, Box, Stack, TextField, Typography, InputAdornment } from "@mui/material";
 import { LocalShipping, Numbers, Notes, QrCode2 } from "@mui/icons-material";
-import { confirmFromScan } from "@/services/qr.service";
+import { confirmFromScan } from "../../services/qr.service";
 
 type Props = {
   open: boolean;

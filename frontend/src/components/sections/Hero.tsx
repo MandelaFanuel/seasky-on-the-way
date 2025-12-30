@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import Container from "@/components/layout/Container";
+import Container from "../../components/layout/Container";
 import { Link } from "react-router-dom";
 
 type StatItem = {

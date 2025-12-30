@@ -4,8 +4,8 @@ import { Box, Typography, Paper, Stack, Button, Alert, Snackbar, alpha } from "@
 import { QrCode2, LocalShipping, Refresh } from "@mui/icons-material";
 
 import QRCodeScanner from "../../components/qr/QRCodeScaner";
-import ScanResultDialog from "@/components/qr/ScanResultDialog";
-import ConfirmDeliveryDialog from "@/components/qr/ConfirmDeliveryDialog";
+import ScanResultDialog from "../../components/qr/ScanResultDialog";
+import ConfirmDeliveryDialog from "../../components/qr/ConfirmDeliveryDialog";
 
 export default function ScanPage() {
   const [raw, setRaw] = useState<string | null>(null);

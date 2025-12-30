@@ -1,8 +1,8 @@
 // ========================= src/components/sections/Milk.tsx =========================
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Container from "@/components/layout/Container";
-import SectionTitle from "@/components/layout/SectionTitle";
+import Container from "../../components/layout/Container";
+import SectionTitle from "../../components/layout/SectionTitle";
 
 interface Product {
   id: number;

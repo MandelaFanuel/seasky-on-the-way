@@ -10,7 +10,7 @@ import UserDashboardHeader from "./UserDashboardHeader";
 import UserDashboardContent from "./UserDashboardContent";
 import UserDashboardModals from "./UserDashboardModals";
 import MobileNavigationMenu from "./MobileNavigationMenu";
-import Footer from "@/components/sections/Footer";
+import Footer from "../../components/sections/Footer";
 
 type ActivityItem = {
   id: number;
