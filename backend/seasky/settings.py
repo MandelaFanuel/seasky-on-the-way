@@ -150,7 +150,7 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.getenv("POSTGRES_DB", "seasky"),
+            "NAME": os.getenv("POSTGRES_DB", "seasky"),   # ✅ corrigé
             "USER": os.getenv("POSTGRES_USER", "fanuel045"),
             "PASSWORD": os.getenv("POSTGRES_PASSWORD", "414141"),
             "HOST": os.getenv("POSTGRES_HOST", "db"),
@@ -161,6 +161,7 @@ else:
 
 if DATABASE_URL and not dj_database_url:
     print("⚠️ DATABASE_URL fourni mais dj-database-url n'est pas installé. Ajoute-le pour prod.")
+
 
 # ========================= CACHE & REDIS =========================
 REDIS_LOCATION = os.getenv("REDIS_URL", "redis://redis:6379/1")
