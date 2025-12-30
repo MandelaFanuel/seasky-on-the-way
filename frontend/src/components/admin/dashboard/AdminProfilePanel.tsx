@@ -1,0 +1,679 @@
+// ========================= src/components/admin/dashboard/AdminProfilePanel.tsx =========================
+import React, {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
+import axios from "axios";
+
+import {
+  Box,
+  Paper,
+  Typography,
+  alpha,
+  useTheme,
+  Avatar,
+  Stack,
+  Button,
+  Chip,
+  Divider,
+  Alert,
+  Snackbar,
+  CircularProgress,
+  TextField,
+  MenuItem,
+} from "@mui/material";
+
+import {
+  AdminPanelSettings as AdminIcon,
+  VerifiedUser as VerifiedUserIcon,
+  Security as SecurityIcon,
+  Email as EmailIcon,
+  Phone as PhoneIcon,
+  Person as PersonIcon,
+  Edit as EditIcon,
+  Save as SaveIcon,
+  Close as CloseIcon,
+  Badge as BadgeIcon,
+  CalendarMonth as CalendarIcon,
+  Public as PublicIcon,
+  Wc as GenderIcon,
+} from "@mui/icons-material";
+
+export type AdminProfilePanelHandle = {
+  refresh: () => Promise<void>;
+};
+
+type Props = {
+  onLoadingChange?: (loading: boolean) => void;
+};
+
+type Snack = {
+  open: boolean;
+  msg: string;
+  severity: "success" | "error" | "info" | "warning";
+};
+
+type AdminUser = {
+  id?: number;
+  username?: string;
+  email?: string;
+
+  // rôle / flags
+  role?: string;
+  is_staff?: boolean;
+  is_superuser?: boolean;
+
+  full_name?: string;
+  phone?: string;
+  gender?: string;
+  date_of_birth?: string; // YYYY-MM-DD
+  nationality?: string;
+
+  kyc_status?: string;
+  last_login_at?: string;
+  created_at?: string;
+};
+
+function safeInitials(name?: string) {
+  const n = (name || "").trim();
+  if (!n) return "A";
+  return n
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s.charAt(0).toUpperCase())
+    .join("");
+}
+
+function normalizeBaseUrl(input?: string) {
+  let url = (input ?? "").trim();
+  if (!url) return "";
+  url = url.replace(/\/+$/, "");
+  return url;
+}
+
+function getApiBase(): string {
+  const fromEnv =
+    (import.meta as any)?.env?.VITE_API_BASE_URL ||
+    (import.meta as any)?.env?.VITE_API_URL ||
+    "";
+  const base = normalizeBaseUrl(fromEnv);
+  return base || "http://localhost:8000/api/v1";
+}
+
+function getAccessToken(): string | null {
+  return localStorage.getItem("access") || localStorage.getItem("access_token") || null;
+}
+
+function toFrDateTime(input?: string) {
+  if (!input) return "-";
+  try {
+    return new Date(input).toLocaleString("fr-FR");
+  } catch {
+    return input;
+  }
+}
+
+const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function AdminProfilePanel(
+  { onLoadingChange },
+  ref
+) {
+  const theme = useTheme();
+
+  // ✅ IMPORTANT: éviter le refetch infini causé par onLoadingChange inline du parent
+  const onLoadingRef = useRef<Props["onLoadingChange"]>(onLoadingChange);
+  useEffect(() => {
+    onLoadingRef.current = onLoadingChange;
+  }, [onLoadingChange]);
+
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const [admin, setAdmin] = useState<AdminUser | null>(null);
+
+  const [editMode, setEditMode] = useState(false);
+  const [form, setForm] = useState({
+    full_name: "",
+    phone: "",
+    gender: "",
+    date_of_birth: "",
+    nationality: "",
+  });
+
+  const [snack, setSnack] = useState<Snack>({
+    open: false,
+    msg: "",
+    severity: "info",
+  });
+
+  const showSnack = useCallback((msg: string, severity: Snack["severity"] = "info") => {
+    setSnack({ open: true, msg, severity });
+  }, []);
+
+  // ✅ avoid setState after unmount
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const api = useMemo(() => {
+    const instance = axios.create({
+      baseURL: getApiBase(),
+      headers: { "Content-Type": "application/json" },
+      timeout: 15000,
+    });
+
+    instance.interceptors.request.use((config: any) => {
+      const token = getAccessToken();
+      if (token) config.headers.Authorization = `Bearer ${token}`;
+      return config;
+    });
+
+    return instance;
+  }, []);
+
+  const isAdmin = useMemo(() => {
+    return Boolean(
+      admin &&
+        (admin.is_superuser ||
+          admin.is_staff ||
+          (admin.role || "").toLowerCase() === "admin")
+    );
+  }, [admin]);
+
+  // ✅ Rôle affiché: basé sur flags admin (même si role DB est "client")
+  const displayRole = useMemo(() => {
+    if (!admin) return "admin";
+    if (admin.is_superuser || admin.is_staff) return "admin";
+    const r = (admin.role || "").trim();
+    return r ? r : "admin";
+  }, [admin]);
+
+  const missingFields = useMemo(() => {
+    const a = admin || {};
+    const missing: string[] = [];
+    if (!String(a.full_name || "").trim()) missing.push("Nom complet");
+    if (!String(a.phone || "").trim()) missing.push("Téléphone");
+    if (!String(a.gender || "").trim()) missing.push("Genre");
+    if (!String(a.date_of_birth || "").trim()) missing.push("Date de naissance");
+    if (!String(a.nationality || "").trim()) missing.push("Nationalité");
+    return missing;
+  }, [admin]);
+
+  const profileComplete = useMemo(() => missingFields.length === 0, [missingFields]);
+
+  const profileCompletePreview = useMemo(() => {
+    if (!editMode) return profileComplete;
+    const missing: string[] = [];
+    if (!form.full_name.trim()) missing.push("Nom complet");
+    if (!form.phone.trim()) missing.push("Téléphone");
+    if (!form.gender.trim()) missing.push("Genre");
+    if (!form.date_of_birth.trim()) missing.push("Date de naissance");
+    if (!form.nationality.trim()) missing.push("Nationalité");
+    return missing.length === 0;
+  }, [editMode, form, profileComplete]);
+
+  const initials = useMemo(() => safeInitials(admin?.full_name || admin?.username), [admin]);
+
+  const fillFormFromAdmin = useCallback((u: AdminUser) => {
+    setForm({
+      full_name: u.full_name || "",
+      phone: u.phone || "",
+      gender: u.gender || "",
+      date_of_birth: u.date_of_birth || "",
+      nationality: u.nationality || "",
+    });
+  }, []);
+
+  const fetchProfile = useCallback(async () => {
+    setLoading(true);
+    onLoadingRef.current?.(true);
+
+    const controller = new AbortController();
+
+    try {
+      const res = await api.get("/me/profile/", { signal: controller.signal as any });
+      const data = (res?.data || {}) as AdminUser;
+
+      if (!mountedRef.current) return;
+
+      setAdmin(data);
+      fillFormFromAdmin(data);
+    } catch (e: any) {
+      if (!mountedRef.current) return;
+      const msg =
+        e?.response?.data?.detail ||
+        e?.response?.data?.message ||
+        (e?.code === "ECONNABORTED" ? "Timeout: le serveur ne répond pas (15s)" : "") ||
+        e?.message ||
+        "Impossible de charger le profil admin";
+      showSnack(msg, "error");
+      setAdmin(null);
+    } finally {
+      if (!mountedRef.current) return;
+      setLoading(false);
+      onLoadingRef.current?.(false);
+    }
+  }, [api, fillFormFromAdmin, showSnack]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  useImperativeHandle(ref, () => ({
+    refresh: async () => {
+      await fetchProfile();
+    },
+  }));
+
+  // ✅ Auto-kyc verified pour admin : UNIQUEMENT si profil complet
+  const didAutoVerifyRef = useRef(false);
+  useEffect(() => {
+    if (!admin) return;
+    if (!isAdmin) return;
+    if (!profileComplete) return;
+    if (didAutoVerifyRef.current) return;
+
+    const current = (admin.kyc_status || "").toLowerCase();
+    if (current === "verified") {
+      didAutoVerifyRef.current = true;
+      return;
+    }
+
+    didAutoVerifyRef.current = true;
+
+    (async () => {
+      try {
+        await api.patch("/me/update_profile/", { kyc_status: "verified" });
+        if (!mountedRef.current) return;
+        setAdmin((p) => (p ? { ...p, kyc_status: "verified" } : p));
+      } catch {
+        // ignore
+      }
+    })();
+  }, [admin, api, isAdmin, profileComplete]);
+
+  const handleStartEdit = () => {
+    if (admin) fillFormFromAdmin(admin);
+    setEditMode(true);
+  };
+
+  const handleCancelEdit = () => {
+    if (admin) fillFormFromAdmin(admin);
+    setEditMode(false);
+  };
+
+  const validateForm = () => {
+    const missing: string[] = [];
+    if (!form.full_name.trim()) missing.push("Nom complet");
+    if (!form.phone.trim()) missing.push("Téléphone");
+    if (!form.gender.trim()) missing.push("Genre");
+    if (!form.date_of_birth.trim()) missing.push("Date de naissance");
+    if (!form.nationality.trim()) missing.push("Nationalité");
+
+    if (missing.length) {
+      showSnack(`Veuillez compléter: ${missing.join(", ")}`, "warning");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) return;
+
+    setSaving(true);
+    onLoadingRef.current?.(true);
+
+    try {
+      const payload: any = {
+        full_name: form.full_name.trim(),
+        phone: form.phone.trim(),
+        gender: form.gender.trim(),
+        date_of_birth: form.date_of_birth.trim(),
+        nationality: form.nationality.trim(),
+      };
+
+      if (isAdmin && profileCompletePreview) {
+        payload.kyc_status = "verified";
+      }
+
+      const res = await api.patch("/me/update_profile/", payload);
+      const updated = (res?.data || {}) as AdminUser;
+
+      if (!mountedRef.current) return;
+
+      setAdmin((p) => ({ ...(p || {}), ...updated, ...payload }));
+      setEditMode(false);
+      showSnack("Profil mis à jour avec succès", "success");
+    } catch (e: any) {
+      const msg =
+        e?.response?.data?.detail ||
+        e?.response?.data?.message ||
+        (e?.code === "ECONNABORTED" ? "Timeout: le serveur ne répond pas (15s)" : "") ||
+        e?.message ||
+        "Échec de la mise à jour du profil";
+      showSnack(msg, "error");
+    } finally {
+      setSaving(false);
+      onLoadingRef.current?.(false);
+    }
+  };
+
+  const kycLabel = useMemo(() => {
+    if (!admin) return "KYC";
+    if (isAdmin) return profileComplete ? "KYC: Vérifié" : "KYC: Incomplet";
+
+    const v = (admin.kyc_status || "").toLowerCase();
+    if (v === "verified") return "KYC: Vérifié";
+    if (v === "pending") return "KYC: En attente";
+    if (v === "rejected") return "KYC: Rejeté";
+    return "KYC";
+  }, [admin, isAdmin, profileComplete]);
+
+  const kycColor = useMemo(() => {
+    if (isAdmin) {
+      return profileComplete
+        ? { bg: alpha("#4CAF50", 0.1), fg: "#2E7D32" }
+        : { bg: alpha("#FF9800", 0.12), fg: "#EF6C00" };
+    }
+
+    const v = (admin?.kyc_status || "").toLowerCase();
+    if (v === "verified") return { bg: alpha("#4CAF50", 0.1), fg: "#2E7D32" };
+    if (v === "pending") return { bg: alpha("#FF9800", 0.1), fg: "#EF6C00" };
+    if (v === "rejected") return { bg: alpha("#F44336", 0.1), fg: "#C62828" };
+    return { bg: alpha("#27B1E4", 0.12), fg: "#0B568C" };
+  }, [admin, isAdmin, profileComplete]);
+
+  return (
+    <Box
+      sx={{
+        background: "linear-gradient(135deg, #E4F5FB 0%, #D1EBF5 100%)",
+        minHeight: "calc(100vh - 240px)",
+        py: 4,
+        px: { xs: 2, md: 4 },
+        mt: 8,
+      }}
+    >
+      <Box sx={{ mb: 3 }}>
+        <Typography
+          variant="h4"
+          sx={{
+            fontWeight: 900,
+            background: "linear-gradient(135deg, #0B568C 0%, #27B1E4 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}
+        >
+          Profil Administrateur
+        </Typography>
+        <Typography sx={{ color: "#335F7A", fontWeight: 600 }}>
+          Complète tes informations personnelles (KYC admin : vérifié automatiquement une fois le profil complet)
+        </Typography>
+      </Box>
+
+      <Paper
+        sx={{
+          p: 4,
+          borderRadius: 3,
+          boxShadow: "0 12px 40px rgba(10, 52, 95, 0.1)",
+          border: "1px solid rgba(11, 86, 140, 0.1)",
+          background: "linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)",
+        }}
+      >
+        <Box display="flex" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={2}>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Avatar
+              sx={{
+                width: 72,
+                height: 72,
+                bgcolor: "white",
+                color: "#0B568C",
+                border: "2px solid rgba(11,86,140,0.15)",
+                boxShadow: "0 12px 30px rgba(11, 86, 140, 0.15)",
+                fontWeight: 900,
+                fontSize: "1.6rem",
+              }}
+            >
+              {initials}
+            </Avatar>
+
+            <Box>
+              <Typography sx={{ fontWeight: 900, color: "#1A4F75", fontSize: "1.25rem" }}>
+                {admin?.full_name || "Administrateur"}
+              </Typography>
+              <Typography sx={{ color: "#487F9A", fontWeight: 800 }}>
+                @{admin?.username || "admin"} • {displayRole}
+              </Typography>
+
+              <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap", gap: 1 }}>
+                <Chip
+                  icon={<AdminIcon />}
+                  label="Accès Admin"
+                  sx={{ fontWeight: 900, backgroundColor: alpha("#0B568C", 0.1), color: "#0B568C" }}
+                />
+                <Chip
+                  icon={<SecurityIcon />}
+                  label="Sécurité"
+                  sx={{ fontWeight: 900, backgroundColor: alpha("#27B1E4", 0.12), color: "#0B568C" }}
+                />
+                <Chip
+                  icon={<VerifiedUserIcon />}
+                  label={kycLabel}
+                  sx={{ fontWeight: 900, backgroundColor: kycColor.bg, color: kycColor.fg }}
+                />
+              </Stack>
+            </Box>
+          </Stack>
+
+          <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="flex-end" alignItems="center" gap={1}>
+            {!editMode ? (
+              <Button
+                variant="contained"
+                startIcon={<EditIcon />}
+                onClick={handleStartEdit}
+                disabled={loading || saving}
+                sx={{
+                  borderRadius: "50px",
+                  textTransform: "none",
+                  fontWeight: 900,
+                  px: 3,
+                  background: "linear-gradient(135deg, #0B568C 0%, #27B1E4 100%)",
+                  boxShadow: "0 8px 24px rgba(11, 86, 140, 0.35)",
+                  "&:hover": { transform: "translateY(-2px)" },
+                }}
+              >
+                Modifier mon profil
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="contained"
+                  startIcon={<SaveIcon />}
+                  onClick={handleSave}
+                  disabled={saving}
+                  sx={{
+                    borderRadius: "50px",
+                    textTransform: "none",
+                    fontWeight: 900,
+                    px: 3,
+                    background: "linear-gradient(135deg, #0B568C 0%, #27B1E4 100%)",
+                    boxShadow: "0 8px 24px rgba(11, 86, 140, 0.35)",
+                    "&:hover": { transform: "translateY(-2px)" },
+                  }}
+                >
+                  {saving ? "Enregistrement..." : "Enregistrer"}
+                </Button>
+
+                <Button
+                  variant="outlined"
+                  startIcon={<CloseIcon />}
+                  onClick={handleCancelEdit}
+                  disabled={saving}
+                  sx={{
+                    borderRadius: "50px",
+                    textTransform: "none",
+                    fontWeight: 900,
+                    borderWidth: 2,
+                    borderColor: alpha("#0B568C", 0.35),
+                    color: "#0B568C",
+                    "&:hover": { borderWidth: 2, backgroundColor: alpha("#0B568C", 0.05) },
+                  }}
+                >
+                  Annuler
+                </Button>
+              </>
+            )}
+          </Stack>
+        </Box>
+
+        <Divider sx={{ my: 3 }} />
+
+        {(loading || saving) && (
+          <Alert severity="info" sx={{ borderRadius: 2, mb: 2 }}>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <CircularProgress size={18} />
+              <Typography fontWeight={900}>
+                {saving ? "Enregistrement du profil…" : "Chargement du profil…"}
+              </Typography>
+            </Stack>
+          </Alert>
+        )}
+
+        {!!missingFields.length && !editMode && (
+          <Alert severity="warning" sx={{ borderRadius: 2, mb: 2, fontWeight: 700 }}>
+            Profil incomplet. Merci de compléter : <b>{missingFields.join(", ")}</b>.
+          </Alert>
+        )}
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+            gap: 2,
+          }}
+        >
+          <Paper sx={{ p: 3, borderRadius: 3, border: "1px solid rgba(11,86,140,0.08)" }}>
+            <Typography fontWeight={900} sx={{ color: "#1A4F75", mb: 2 }}>
+              Informations personnelles
+            </Typography>
+
+            <Stack spacing={2}>
+              <TextField
+                label="Nom complet **"
+                value={editMode ? form.full_name : admin?.full_name || ""}
+                onChange={(e) => setForm((p) => ({ ...p, full_name: e.target.value }))}
+                disabled={!editMode}
+                fullWidth
+                InputProps={{ startAdornment: <BadgeIcon sx={{ mr: 1, color: "#0B568C" }} /> as any }}
+              />
+
+              <TextField
+                label="Téléphone **"
+                value={editMode ? form.phone : admin?.phone || ""}
+                onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+                disabled={!editMode}
+                fullWidth
+                InputProps={{ startAdornment: <PhoneIcon sx={{ mr: 1, color: "#0B568C" }} /> as any }}
+              />
+
+              <TextField
+                select
+                label="Genre **"
+                value={editMode ? form.gender : admin?.gender || ""}
+                onChange={(e) => setForm((p) => ({ ...p, gender: e.target.value }))}
+                disabled={!editMode}
+                fullWidth
+                InputProps={{ startAdornment: <GenderIcon sx={{ mr: 1, color: "#0B568C" }} /> as any }}
+              >
+                <MenuItem value="">— Sélectionner —</MenuItem>
+                <MenuItem value="male">Masculin</MenuItem>
+                <MenuItem value="female">Féminin</MenuItem>
+                <MenuItem value="other">Autre</MenuItem>
+              </TextField>
+
+              <TextField
+                label="Date de naissance **"
+                type="date"
+                value={editMode ? form.date_of_birth : admin?.date_of_birth || ""}
+                onChange={(e) => setForm((p) => ({ ...p, date_of_birth: e.target.value }))}
+                disabled={!editMode}
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+                InputProps={{ startAdornment: <CalendarIcon sx={{ mr: 1, color: "#0B568C" }} /> as any }}
+              />
+
+              <TextField
+                label="Nationalité **"
+                value={editMode ? form.nationality : admin?.nationality || ""}
+                onChange={(e) => setForm((p) => ({ ...p, nationality: e.target.value }))}
+                disabled={!editMode}
+                fullWidth
+                InputProps={{ startAdornment: <PublicIcon sx={{ mr: 1, color: "#0B568C" }} /> as any }}
+              />
+            </Stack>
+          </Paper>
+
+          <Paper sx={{ p: 3, borderRadius: 3, border: "1px solid rgba(11,86,140,0.08)" }}>
+            <Typography fontWeight={900} sx={{ color: "#1A4F75", mb: 2 }}>
+              Compte & session
+            </Typography>
+
+            <Stack spacing={1.2}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <EmailIcon sx={{ color: "#0B568C" }} />
+                <Typography fontWeight={800} sx={{ color: "#335F7A" }}>
+                  {admin?.email || "-"}
+                </Typography>
+              </Stack>
+
+              <Stack direction="row" spacing={1} alignItems="center">
+                <PersonIcon sx={{ color: "#0B568C" }} />
+                <Typography fontWeight={800} sx={{ color: "#335F7A" }}>
+                  Rôle: {displayRole}
+                </Typography>
+              </Stack>
+
+              <Typography sx={{ color: "#335F7A", fontWeight: 800, mt: 1 }}>
+                Dernière connexion:{" "}
+                <Box component="span" sx={{ color: "#487F9A" }}>
+                  {admin?.last_login_at ? toFrDateTime(admin.last_login_at) : "-"}
+                </Box>
+              </Typography>
+
+              <Alert severity="info" sx={{ borderRadius: 2, mt: 2 }}>
+                <Typography fontWeight={800}>
+                  Conseil : complète ton profil pour activer automatiquement le badge KYC Admin.
+                </Typography>
+              </Alert>
+            </Stack>
+          </Paper>
+        </Box>
+      </Paper>
+
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={4500}
+        onClose={() => setSnack((p) => ({ ...p, open: false }))}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert
+          onClose={() => setSnack((p) => ({ ...p, open: false }))}
+          severity={snack.severity}
+          sx={{ borderRadius: 3, fontWeight: 900 }}
+        >
+          {snack.msg}
+        </Alert>
+      </Snackbar>
+    </Box>
+  );
+});
+
+export default AdminProfilePanel;

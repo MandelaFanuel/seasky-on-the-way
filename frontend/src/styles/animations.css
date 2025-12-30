@@ -1,0 +1,272 @@
+/* src/styles/animations.css */
+
+/* ================================
+   KEYFRAMES
+================================ */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bounce-soft {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes checkmark {
+  0% {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+/* ================================
+   CLASSES (LOAD ANIMATIONS)
+   ✅ Elles s’exécutent au chargement, sans .active
+================================ */
+
+.animate-fade-in-up {
+  opacity: 0;
+  transform: translateY(22px);
+  animation: fadeInUp 0.8s ease-out both;
+}
+
+.animate-fadeInUp {
+  opacity: 0;
+  transform: translateY(22px);
+  animation: fadeInUp 0.8s ease-out both;
+}
+
+.animate-fadeInLeft {
+  opacity: 0;
+  transform: translateX(-22px);
+  animation: fadeInLeft 0.8s ease-out both;
+}
+
+.animate-fadeInRight {
+  opacity: 0;
+  transform: translateX(22px);
+  animation: fadeInRight 0.8s ease-out both;
+}
+
+.animate-fadeIn {
+  opacity: 0;
+  transform: translateY(-8px);
+  animation: fadeIn 0.45s ease-in-out both;
+}
+
+.animate-scaleIn {
+  opacity: 0;
+  transform: scale(0.96);
+  animation: scaleIn 0.55s ease-out both;
+}
+
+.animate-bounce-soft {
+  animation: bounce-soft 2s ease-in-out infinite;
+}
+
+.animate-rotate {
+  animation: rotate 1s linear infinite;
+}
+
+/* Shimmer */
+.animate-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.animate-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.22),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
+
+/* Checkmark */
+.animate-checkmark {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: checkmark 0.5s ease-in-out both;
+}
+
+/* Helpers */
+.validation-error { animation: shake 0.5s ease-in-out; }
+
+/* ================================
+   ACCESSIBILITY
+================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .animate-fade-in-up,
+  .animate-fadeInUp,
+  .animate-fadeInLeft,
+  .animate-fadeInRight,
+  .animate-fadeIn,
+  .animate-scaleIn {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+}
+
+
+
+/* src/styles/global.css */
+
+/* Animations supplémentaires */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeInDown {
+  opacity: 0;
+  transform: translateY(-20px);
+  animation: fadeInDown 0.5s ease-out both;
+}
+
+/* Améliorations pour mobile */
+@media (max-width: 768px) {
+  .mobile-optimized-scroll {
+    -webkit-overflow-scrolling: touch;
+    overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+  
+  /* Éviter le zoom sur les inputs */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+  
+  /* Meilleure taille de tap pour l'accessibilité */
+  button, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Améliorer le contraste sur mobile */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Optimisations de performance */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fadeInDown,
+  .animate-fadeInUp,
+  .animate-fadeInLeft,
+  .animate-fadeInRight,
+  .animate-fadeIn,
+  .animate-scaleIn,
+  .animate-bounce-soft,
+  .animate-rotate {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Support pour iOS */
+@supports (-webkit-touch-callout: none) {
+  .mobile-optimized-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+}
