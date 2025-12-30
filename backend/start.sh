@@ -5,56 +5,65 @@ echo "================================================"
 echo "🚀 SeaSky Platform - Initialisation du Backend"
 echo "================================================"
 
-# -----------------------------------------------------------------------------
-# Defaults (LOCAL/DOCKER) — Render doit plutôt fournir DATABASE_URL
-# -----------------------------------------------------------------------------
+: "${DJANGO_DEBUG:=false}"
+: "${PORT:=8000}"
+
 : "${POSTGRES_HOST:=db}"
 : "${POSTGRES_PORT:=5432}"
 : "${POSTGRES_DB:=seasky}"
 : "${POSTGRES_USER:=fanuel045}"
 : "${POSTGRES_PASSWORD:=414141}"
 
-: "${DJANGO_DEBUG:=false}"
-: "${ENVIRONMENT:=development}"
-: "${PORT:=8000}"
-
 DATABASE_URL="${DATABASE_URL:-}"
-DATABASE_URL="$(echo "${DATABASE_URL}" | xargs || true)" # trim
+DATABASE_URL="$(echo "${DATABASE_URL}" | xargs || true)"
 
 echo "🔍 Variables:"
 echo "  • DJANGO_DEBUG=$DJANGO_DEBUG"
-echo "  • ENVIRONMENT=$ENVIRONMENT"
 echo "  • PORT=$PORT"
+echo "  • RENDER_SERVICE_ID=${RENDER_SERVICE_ID:-<empty>}"
+
 if [[ -n "${DATABASE_URL}" ]]; then
   echo "  • DATABASE_URL=***set***"
 else
-  echo "  • DATABASE_URL=<empty>"
+  echo "  • DATABASE_URL=<empty> (fallback POSTGRES_*)"
+  echo "  • POSTGRES_HOST=$POSTGRES_HOST"
+  echo "  • POSTGRES_PORT=$POSTGRES_PORT"
+  echo "  • POSTGRES_DB=$POSTGRES_DB"
+  echo "  • POSTGRES_USER=$POSTGRES_USER"
 fi
-echo "  • POSTGRES_HOST=$POSTGRES_HOST"
-echo "  • POSTGRES_PORT=$POSTGRES_PORT"
-echo "  • POSTGRES_DB=$POSTGRES_DB"
-echo "  • POSTGRES_USER=$POSTGRES_USER"
 echo ""
 
-# -----------------------------------------------------------------------------
-# DB URL selection
-#   - Render: DATABASE_URL (postgresql://user:pass@host/db)
-#   - Local/Docker: build from POSTGRES_*
-# -----------------------------------------------------------------------------
 if [[ -n "${DATABASE_URL}" ]]; then
   DB_URL="${DATABASE_URL}"
 else
   DB_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
 fi
+export DB_URL
 
-echo "⏳ Attente de PostgreSQL (test réel)..."
+# Affiche un résumé sans password
+python - <<'PY'
+import os
+u = os.environ.get("DB_URL","").strip()
+safe = u
+if "@" in u and "://" in u:
+    proto, rest = u.split("://",1)
+    if "@" in rest and ":" in rest.split("@",1)[0]:
+        userpass, hostpart = rest.split("@",1)
+        user = userpass.split(":",1)[0]
+        safe = f"{proto}://{user}:***@{hostpart}"
+print("🧩 DB_URL =", safe if safe else "<empty>")
+PY
 
-python - <<PY
+echo "⏳ Attente de PostgreSQL (test réel via psycopg)..."
+
+python - <<'PY'
 import os, sys, time
 import psycopg
 
-db_url = os.environ.get("DB_URL") or ""
-db_url = db_url.strip()
+db_url = (os.environ.get("DB_URL") or "").strip()
+if not db_url:
+    print("❌ DB_URL vide. Configure DATABASE_URL (Render) ou POSTGRES_* (local).")
+    sys.exit(1)
 
 for i in range(1, 61):
     try:
@@ -68,10 +77,9 @@ for i in range(1, 61):
         time.sleep(2)
 
 print("❌ Impossible de se connecter à PostgreSQL.")
-print("   Vérifie DATABASE_URL (Render) ou POSTGRES_* (local).")
+print("   👉 Sur Render: vérifie DATABASE_URL (Internal DB URL) + DB 'Available'.")
 sys.exit(1)
 PY
-export DB_URL="$DB_URL"
 
 echo ""
 echo "🔄 Migrations..."
@@ -82,56 +90,22 @@ echo "📁 Collectstatic..."
 python manage.py collectstatic --noinput --clear || true
 
 echo ""
-echo "👑 Superuser (optionnel)..."
-python manage.py create_superuser_if_not_exists || true
-
-echo ""
 echo "================================================"
 echo "🌐 Démarrage du serveur SeaSky"
 echo "================================================"
-echo "  • Backend API:  http://0.0.0.0:${PORT}/api/v1/"
-echo "  • Admin Django: http://0.0.0.0:${PORT}/admin/"
-echo "================================================"
 
-# -----------------------------------------------------------------------------
-# Serve
-# - Dev: runserver
-# - Prod: gunicorn
-#
-# IMPORTANT:
-#  - Render requires binding to $PORT (not fixed 8000)
-#  - If you use Channels/WebSockets: prefer ASGI (uvicorn worker)
-# -----------------------------------------------------------------------------
 DJ_DEBUG_LOWER="$(echo "${DJANGO_DEBUG}" | tr '[:upper:]' '[:lower:]')"
 
 if [[ "${DJ_DEBUG_LOWER}" == "true" || "${DJANGO_DEBUG}" == "1" ]]; then
-  echo "🚀 Mode développement: runserver"
   exec python manage.py runserver 0.0.0.0:${PORT}
 else
   if command -v gunicorn >/dev/null 2>&1; then
-    echo "🚀 Mode production: gunicorn"
-
-    # ✅ ASGI si Channels (recommandé)
-    if python -c "import importlib; import sys; sys.exit(0 if importlib.util.find_spec('channels') else 1)" >/dev/null 2>&1; then
-      # Remplace "backend.asgi:application" si ton module ASGI a un autre chemin
-      # D'après ton log précédent tu avais "backend.asgi:application", ici je mets "seasky.asgi:application"
-      # -> Choisis le bon: si ton projet Django s'appelle "seasky", garde seasky.asgi
-      ASGI_APP="${ASGI_APPLICATION:-seasky.asgi:application}"
-      exec gunicorn "$ASGI_APP" \
-        -k uvicorn.workers.UvicornWorker \
-        --bind 0.0.0.0:${PORT} \
-        --workers "${WEB_CONCURRENCY:-1}" \
-        --timeout 120
-    else
-      # WSGI classique
-      exec gunicorn seasky.wsgi:application \
-        --bind 0.0.0.0:${PORT} \
-        --workers "${WEB_CONCURRENCY:-3}" \
-        --threads 2 \
-        --timeout 120
-    fi
+    exec gunicorn seasky.wsgi:application \
+      --bind 0.0.0.0:${PORT} \
+      --workers "${WEB_CONCURRENCY:-1}" \
+      --threads 2 \
+      --timeout 120
   else
-    echo "⚠️ gunicorn absent → fallback runserver"
     exec python manage.py runserver 0.0.0.0:${PORT}
   fi
 fi
