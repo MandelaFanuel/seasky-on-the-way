@@ -97,6 +97,7 @@ coverage/
 # =========================
 postgres/
 tea/
+uuid
 uuid/
 
 # Python history / shell artifacts

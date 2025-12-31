@@ -15,15 +15,11 @@ from dotenv import load_dotenv
 
 # ========================= PATH CONFIGURATION =========================
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-# Add apps directory to Python path (so "apps.xxx" imports work)
 sys.path.insert(0, str(BASE_DIR / "apps"))
 
 # ========================= ENVIRONMENT LOADING =========================
 ENV_FILE = BASE_DIR / ".env"
 
-# Render injecte les variables d'environnement au runtime.
-# Il ne faut JAMAIS écraser ces variables en prod.
 IS_RENDER = bool(os.getenv("RENDER")) or bool(os.getenv("RENDER_SERVICE_ID"))
 
 if ENV_FILE.exists() and not IS_RENDER:
@@ -45,20 +41,15 @@ def _bool_env(name: str, default: bool = False) -> bool:
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-dev-key-change-in-production-2025")
 DEBUG = _bool_env("DJANGO_DEBUG", default=True)
 
-# Sur Render, Django est derrière un proxy (HTTPS terminaison)
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # ========================= HOST CONFIGURATION =========================
-# ✅ Fix Render: autorise ton domaine + wildcard ".onrender.com"
-# Tu peux toujours surcharger via env ALLOWED_HOSTS.
-ALLOWED_HOSTS_STRING = os.getenv(
-    "ALLOWED_HOSTS",
-    "127.0.0.1,localhost,0.0.0.0,backend,.onrender.com"
-)
+# ✅ Ajout du domaine Render exact (important)
+DEFAULT_ALLOWED_HOSTS = "127.0.0.1,localhost,0.0.0.0,backend,.onrender.com,seasky-backend.onrender.com"
+ALLOWED_HOSTS_STRING = os.getenv("ALLOWED_HOSTS", DEFAULT_ALLOWED_HOSTS)
 ALLOWED_HOSTS = _split_csv(ALLOWED_HOSTS_STRING)
 
-# IMPORTANT: éviter les comportements bizarres de redirect POST -> / (APPEND_SLASH)
 APPEND_SLASH = True
 
 # ========================= APPLICATION DEFINITION =========================
@@ -80,7 +71,7 @@ THIRD_PARTY_APPS = [
     "rest_framework_simplejwt",
     "django_filters",
     "django_redis",
-    # "rest_framework_simplejwt.token_blacklist"  # active seulement si tu blacklist refresh tokens
+    "channels",  # ✅ indispensable pour ASGI/websocket
 ]
 
 if DEBUG and _bool_env("ENABLE_DEBUG_TOOLBAR", default=True):
@@ -107,11 +98,9 @@ MIDDLEWARE = [
 
     "django.contrib.sessions.middleware.SessionMiddleware",
 
-    # CORS doit être avant CommonMiddleware
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
 
-    # CSRF reste pour admin / forms server-side.
     "django.middleware.csrf.CsrfViewMiddleware",
 
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -124,7 +113,9 @@ if DEBUG and "debug_toolbar" in INSTALLED_APPS:
 
 # ========================= URL & TEMPLATE CONFIGURATION =========================
 ROOT_URLCONF = "seasky.urls"
+
 WSGI_APPLICATION = "seasky.wsgi.application"
+ASGI_APPLICATION = "seasky.asgi.application"  # ✅ IMPORTANT
 
 TEMPLATES = [
     {
@@ -143,7 +134,6 @@ TEMPLATES = [
 ]
 
 # ========================= DATABASE CONFIGURATION =========================
-# ✅ Supporte: Docker/local (POSTGRES_*) + Prod (DATABASE_URL Render/Railway/Fly…)
 try:
     import dj_database_url  # type: ignore
 except Exception:
@@ -156,7 +146,7 @@ if DATABASE_URL and dj_database_url:
         "default": dj_database_url.parse(
             DATABASE_URL,
             conn_max_age=600,
-            ssl_require=not DEBUG,  # SSL en prod, pas en dev
+            ssl_require=not DEBUG,
         )
     }
 else:
@@ -198,6 +188,14 @@ CACHES = {
     }
 }
 
+# ✅ Channels Redis layer (recommandé pour websockets en prod)
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {"hosts": [os.getenv("REDIS_URL", "redis://redis:6379/0")]},
+    }
+}
+
 # ========================= AUTHENTICATION =========================
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -208,11 +206,13 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # ========================= INTERNATIONALIZATION =========================
 LANGUAGE_CODE = "fr-fr"
-TIME_ZONE = os.getenv("TIME_ZONE", "Africa/Bujumbura")
+
+# ✅ Render t'a refusé TIME_ZONE comme key: utilise DJANGO_TIME_ZONE
+TIME_ZONE = os.getenv("DJANGO_TIME_ZONE", "Africa/Bujumbura")
+
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
-
 
 # ========================= STATIC & MEDIA FILES =========================
 STATIC_URL = "/static/"
@@ -245,14 +245,9 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_RENDERER_CLASSES": (
-        [
-            "rest_framework.renderers.JSONRenderer",
-            "rest_framework.renderers.BrowsableAPIRenderer",
-        ]
+        ["rest_framework.renderers.JSONRenderer", "rest_framework.renderers.BrowsableAPIRenderer"]
         if DEBUG
-        else [
-            "rest_framework.renderers.JSONRenderer",
-        ]
+        else ["rest_framework.renderers.JSONRenderer"]
     ),
 }
 
@@ -263,13 +258,10 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": False,
     "UPDATE_LAST_LOGIN": True,
-
     "ALGORITHM": os.getenv("JWT_ALGORITHM", "HS256"),
     "SIGNING_KEY": SECRET_KEY,
-
     "AUTH_HEADER_TYPES": ("Bearer",),
     "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
-
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
 }
@@ -277,16 +269,13 @@ SIMPLE_JWT = {
 # ========================= CORS / CSRF =========================
 from corsheaders.defaults import default_headers, default_methods  # noqa: E402
 
-# Ton SPA utilise JWT Bearer, pas de cookies
 CORS_ALLOW_CREDENTIALS = False
 
-# CORS exact origins
 CORS_ALLOWED_ORIGINS = _split_csv(os.getenv("CORS_ALLOWED_ORIGINS", "")) or [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
 
-# Regex origins (utile pour Vercel preview URLs)
 CORS_ALLOWED_ORIGIN_REGEXES = _split_csv(os.getenv("CORS_ALLOWED_ORIGIN_REGEXES", "")) or [
     r"^https://.*\.vercel\.app$",
 ]
@@ -297,16 +286,13 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
     "x-requested-with",
 ]
 CORS_ALLOW_METHODS = list(default_methods)
-
 CORS_EXPOSE_HEADERS = ["Authorization", "Content-Type"]
 
-# CSRF trusted origins (utile pour admin/browsable API si tu y accèdes depuis Vercel)
 CSRF_TRUSTED_ORIGINS = _split_csv(os.getenv("CSRF_TRUSTED_ORIGINS", "")) or [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
-    # ✅ Render (si tu accèdes à l'admin/browsable API via le domaine Render)
     "https://seasky-backend.onrender.com",
 ]
 
@@ -336,7 +322,6 @@ SPECTACULAR_SETTINGS = {
 
 # ========================= LOGGING =========================
 LOG_TO_FILE = _bool_env("LOG_TO_FILE", default=False)
-
 (BASE_DIR / "logs").mkdir(exist_ok=True)
 
 handlers: dict = {
