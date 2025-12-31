@@ -32,7 +32,7 @@ const Milk: React.FC = () => {
     () => [
       {
         id: 1,
-        image: "/src/assets/images/seasky1.webp",
+        image: "/images/seasky1.webp",
         alt: "Lait Frais SeaSky",
         title: "Lait Frais Pasteurisé",
         description: "Lait entier frais pasteurisé, riche en nutriments essentiels",
@@ -44,7 +44,7 @@ const Milk: React.FC = () => {
       },
       {
         id: 2,
-        image: "/src/assets/images/seasky2.webp",
+        image: "/images/seasky2.webp",
         alt: "Lait Entier SeaSky",
         title: "Lait Entier UHT",
         description: "Lait entier UHT longue conservation, qualité premium",
@@ -56,7 +56,7 @@ const Milk: React.FC = () => {
       },
       {
         id: 3,
-        image: "/src/assets/images/seasky3.webp",
+        image: "/images/seasky3.webp",
         alt: "Pack Familial SeaSky",
         title: "Pack Familial",
         description: "Pack économique de 3L de lait frais pour toute la famille",
@@ -68,7 +68,7 @@ const Milk: React.FC = () => {
       },
       {
         id: 4,
-        image: "/src/assets/images/seasky7.webp",
+        image: "/images/seasky7.webp",
         alt: "Lait Bio SeaSky",
         title: "Lait Biologique",
         description: "Lait 100% biologique certifié, production responsable",
@@ -80,7 +80,7 @@ const Milk: React.FC = () => {
       },
       {
         id: 5,
-        image: "/src/assets/images/seasky8.webp",
+        image: "/images/seasky8.webp",
         alt: "Lait Premium SeaSky",
         title: "Lait Premium",
         description: "Sélection premium issue de fermes partenaires",
@@ -92,7 +92,7 @@ const Milk: React.FC = () => {
       },
       {
         id: 6,
-        image: "/src/assets/images/seasky5.webp",
+        image: "/images/seasky5.webp",
         alt: "Crème Fraîche SeaSky",
         title: "Crème Fraîche",
         description: "Crème fraîche épaisse, idéale cuisine & pâtisserie",
@@ -104,7 +104,7 @@ const Milk: React.FC = () => {
       },
       {
         id: 7,
-        image: "/src/assets/images/seasky9.webp",
+        image: "/images/seasky9.webp",
         alt: "Yaourt Nature SeaSky",
         title: "Yaourt Nature",
         description: "Fermentation naturelle, goût authentique",

@@ -5,7 +5,7 @@ import { logout } from "../../store/store";
 import type { RootState } from "../../store/store";
 import Container from "./Container";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import logo from "../../assets/logos/seaskyLogo1.png";
+import logo from "../../../public/logos/seaskyLogo1.png";
 import { useCart } from "../../components/sections/product/CartContext";
 import { logoutUser } from "../../api/client";
 

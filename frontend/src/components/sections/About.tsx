@@ -52,13 +52,13 @@ const About: React.FC = () => {
   ];
 
   const partners = [
-    { name: "Fanuel", image: "/src/assets/images/partenaires/Fanuel2.jpg", category: "Distribution", since: "2015", verified: true },
-    { name: "Maison Médicale", image: "/src/assets/images/partenaires/MaisonMedicale.jpg", category: "Santé & Nutrition", since: "2018", verified: true },
-    { name: "Polyclinique Muyinga", image: "/src/assets/images/partenaires/PollyclinicMuyinga.jpg", category: "Santé & Bien-être", since: "2019", verified: false },
-    { name: "Roi Khaled", image: "/src/assets/images/partenaires/RoisKhaled.jpg", category: "Commerce", since: "2016", verified: true },
-    { name: "Shem", image: "/src/assets/images/partenaires/shem4.jpg", category: "Distribution", since: "2020", verified: false },
-    { name: "Pharmacie Umuco", image: "/src/assets/images/partenaires/shem4.jpg", category: "Santé", since: "2021", verified: true },
-    { name: "Supermarké Tujenge", image: "/src/assets/images/partenaires/shem4.jpg", category: "Commerce", since: "2017", verified: true },
+    { name: "Fanuel", image: "/images/partenaires/Fanuel2.jpg", category: "Distribution", since: "2015", verified: true },
+    { name: "Maison Médicale", image: "/images/partenaires/MaisonMedicale.jpg", category: "Santé & Nutrition", since: "2018", verified: true },
+    { name: "Polyclinique Muyinga", image: "/images/partenaires/PollyclinicMuyinga.jpg", category: "Santé & Bien-être", since: "2019", verified: false },
+    { name: "Roi Khaled", image: "/images/partenaires/RoisKhaled.jpg", category: "Commerce", since: "2016", verified: true },
+    { name: "Shem", image: "/images/partenaires/shem4.jpg", category: "Distribution", since: "2020", verified: false },
+    { name: "Pharmacie Umuco", image: "/images/partenaires/shem4.jpg", category: "Santé", since: "2021", verified: true },
+    { name: "Supermarké Tujenge", image: "/images/partenaires/shem4.jpg", category: "Commerce", since: "2017", verified: true },
   ];
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);

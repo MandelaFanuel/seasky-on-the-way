@@ -5,15 +5,15 @@ import Footer from "../../sections/Footer";
 import { Link } from "react-router-dom";
 
 // Images
-import img1 from "../../../assets/images/seasky1.webp";
-import img2 from "../../../assets/images/seasky2.webp";
-import img3 from "../../../assets/images/seasky3.webp";
-import img4 from "../../../assets/images/seasky11.webp";
-import img5 from "../../../assets/images/seasky5.webp";
-import img6 from "../../../assets/images/seasky9.webp";
-import img7 from "../../../assets/images/seasky7.webp";
-import img8 from "../../../assets/images/seasky8.webp";
-import house from "../../../assets/images/House.jpg";
+import img1 from "../../../../public/images/seasky1.webp";
+import img2 from "../../../../public/images/seasky2.webp";
+import img3 from "../../../../public/images/seasky3.webp";
+import img4 from "../../../../public/images/seasky11.webp";
+import img5 from "../../../../public/images/seasky5.webp";
+import img6 from "../../../../public/images/seasky9.webp";
+import img7 from "../../../../public/images/seasky7.webp";
+import img8 from "../../../../public/images/seasky8.webp";
+import house from "../../../../public/images/House.jpg";
 
 // ---------------------- Icônes ----------------------
 const HeartIcon: React.FC<{ className?: string }> = ({ className = "" }) => (
