@@ -1,8 +1,8 @@
-import Hero from '@/components/sections/Hero';
-import Milk from '@/components/sections/Milk';
-import About from '@/components/sections/About';
-import Leaderboard from '@/components/sections/Leaderboard';
-import Footer from '@/components/sections/Footer';
+import Hero from '../components/sections/Hero';
+import Milk from '../components/sections/Milk';
+import About from '../components/sections/About';
+import Leaderboard from '../components/sections/Leaderboard';
+import Footer from '../components/sections/Footer';
 
 export default function Home() {
   return (

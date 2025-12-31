@@ -57,7 +57,7 @@ import {
 } from "@mui/icons-material";
 
 import PDVForm from "../pdv/PDVForm";
-import { createPDV, listPDV, PDV } from "@/services/pdv.service";
+import { createPDV, listPDV, PDV } from "../../../services/pdv.service";
 
 // StatCard
 const StatCard = ({

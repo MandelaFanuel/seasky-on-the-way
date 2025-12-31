@@ -1,5 +1,5 @@
 // ========================= src/services/pdv.service.ts =========================
-import api from "@/services/api";
+import api from "./api";
 
 export type PDVStock = {
   current_liters?: string | number;

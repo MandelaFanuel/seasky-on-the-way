@@ -1,5 +1,5 @@
 // ========================= src/services/agents.service.ts =========================
-import api from "@/services/api";
+import api from "./api";
 
 export type Agent = {
   id: number;

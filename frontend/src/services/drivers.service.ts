@@ -1,5 +1,5 @@
 // ========================= src/services/drivers.service.ts =========================
-import api from "@/services/api";
+import api from "./api";
 
 export type DriverTransportMode = "vehicule" | "moto" | "velo" | "camion" | "pied";
 

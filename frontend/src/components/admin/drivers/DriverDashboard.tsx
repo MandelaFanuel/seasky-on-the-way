@@ -80,7 +80,7 @@ import DocumentManager from "./DocumentManager";
 import AvailabilityWidget from "./AvailabilityWidget";
 import PerformanceChart from "./PerformanceChart";
 
-import { createDriver, listDrivers } from "@/services/drivers.service";
+import { createDriver, listDrivers } from "../../../services/drivers.service";
 
 // Helper pour normaliser les données
 function normalizeListResponse(data: any): { results: any[]; count: number } {

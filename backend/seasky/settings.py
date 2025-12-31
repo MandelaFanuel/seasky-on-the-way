@@ -21,8 +21,13 @@ sys.path.insert(0, str(BASE_DIR / "apps"))
 
 # ========================= ENVIRONMENT LOADING =========================
 ENV_FILE = BASE_DIR / ".env"
-if ENV_FILE.exists():
-    load_dotenv(ENV_FILE, override=True)
+
+# Render injecte les variables d'environnement au runtime.
+# Il ne faut JAMAIS écraser ces variables en prod.
+IS_RENDER = bool(os.getenv("RENDER")) or bool(os.getenv("RENDER_SERVICE_ID"))
+
+if ENV_FILE.exists() and not IS_RENDER:
+    load_dotenv(ENV_FILE, override=False)
 
 # ========================= HELPERS =========================
 def _split_csv(env_value: str) -> list[str]:
@@ -40,12 +45,20 @@ def _bool_env(name: str, default: bool = False) -> bool:
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-dev-key-change-in-production-2025")
 DEBUG = _bool_env("DJANGO_DEBUG", default=True)
 
+# Sur Render, Django est derrière un proxy (HTTPS terminaison)
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 # ========================= HOST CONFIGURATION =========================
-ALLOWED_HOSTS_STRING = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost,0.0.0.0,backend")
+# ✅ Fix Render: autorise ton domaine + wildcard ".onrender.com"
+# Tu peux toujours surcharger via env ALLOWED_HOSTS.
+ALLOWED_HOSTS_STRING = os.getenv(
+    "ALLOWED_HOSTS",
+    "127.0.0.1,localhost,0.0.0.0,backend,.onrender.com"
+)
 ALLOWED_HOSTS = _split_csv(ALLOWED_HOSTS_STRING)
 
 # IMPORTANT: éviter les comportements bizarres de redirect POST -> / (APPEND_SLASH)
-# Si tu utilises déjà des URLs avec / final, tu peux laisser True.
 APPEND_SLASH = True
 
 # ========================= APPLICATION DEFINITION =========================
@@ -200,6 +213,7 @@ USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
+
 # ========================= STATIC & MEDIA FILES =========================
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
@@ -216,10 +230,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ========================= REST FRAMEWORK (JWT FIRST) =========================
 REST_FRAMEWORK = {
-    # ✅ JWT only (évite CSRF/session)
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-        # NE PAS mettre SessionAuthentication ici (source classique de 403 CSRF)
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticatedOrReadOnly"
@@ -249,7 +261,7 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.getenv("ACCESS_TOKEN_LIFETIME_MINUTES", "1440"))),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=int(os.getenv("REFRESH_TOKEN_LIFETIME_DAYS", "7"))),
     "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": False,  # mets True + active token_blacklist app si tu veux vraiment blacklist
+    "BLACKLIST_AFTER_ROTATION": False,
     "UPDATE_LAST_LOGIN": True,
 
     "ALGORITHM": os.getenv("JWT_ALGORITHM", "HS256"),
@@ -294,6 +306,8 @@ CSRF_TRUSTED_ORIGINS = _split_csv(os.getenv("CSRF_TRUSTED_ORIGINS", "")) or [
     "http://127.0.0.1:5173",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
+    # ✅ Render (si tu accèdes à l'admin/browsable API via le domaine Render)
+    "https://seasky-backend.onrender.com",
 ]
 
 CSRF_COOKIE_SAMESITE = os.getenv("CSRF_COOKIE_SAMESITE", "Lax")
@@ -389,7 +403,6 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # ========================= DEBUG TOOLBAR =========================
 if DEBUG and "debug_toolbar" in INSTALLED_APPS:

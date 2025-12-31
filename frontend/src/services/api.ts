@@ -1,5 +1,5 @@
 // ========================= src/services/api.ts =========================
-import axios from "axios";
+import axios, { type InternalAxiosRequestConfig } from "axios";
 
 function isBrowser() {
   return typeof window !== "undefined";
@@ -77,17 +77,31 @@ function ensureApiV1(url?: string) {
 }
 
 api.interceptors.request.use(
-  (config: { headers: { [x: string]: string; Authorization?: any; }; data: any; url: string | undefined; }) => {
+  (config: InternalAxiosRequestConfig) => {
     const token = getAccessToken();
     config.headers = config.headers ?? {};
 
-    const isFormData = typeof FormData !== "undefined" && config.data instanceof FormData;
+    const isFormData =
+      typeof FormData !== "undefined" &&
+      typeof config.data !== "undefined" &&
+      config.data instanceof FormData;
 
-    if (!config.headers["Content-Type"] && !isFormData) {
-      config.headers["Content-Type"] = "application/json";
+    const hasSet = typeof (config.headers as any).set === "function";
+    const hasGet = typeof (config.headers as any).get === "function";
+
+    const currentContentType = hasGet
+      ? (config.headers as any).get("Content-Type")
+      : (config.headers as any)["Content-Type"];
+
+    if (!currentContentType && !isFormData) {
+      if (hasSet) (config.headers as any).set("Content-Type", "application/json");
+      else (config.headers as any)["Content-Type"] = "application/json";
     }
 
-    if (token) config.headers.Authorization = `Bearer ${token}`;
+    if (token) {
+      if (hasSet) (config.headers as any).set("Authorization", `Bearer ${token}`);
+      else (config.headers as any).Authorization = `Bearer ${token}`;
+    }
 
     if (typeof config.url === "string") {
       config.url = ensureApiV1(config.url);
@@ -95,7 +109,7 @@ api.interceptors.request.use(
 
     return config;
   },
-  (error: any) => Promise.reject(error)
+  (error) => Promise.reject(error)
 );
 
 export default api;

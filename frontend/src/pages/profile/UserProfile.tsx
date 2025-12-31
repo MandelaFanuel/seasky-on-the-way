@@ -1184,7 +1184,9 @@ export default function UserProfile({ isInDashboard = false }: { isInDashboard?:
         style={{
           background: active ? BRAND.panel : "transparent",
           borderColor: active ? BRAND.accent : "transparent",
-          ringColor: BRAND.ring,
+          outline: `2px solid ${BRAND.ring}`,
+          outlineOffset: 2,
+
         }}
       >
         <div 
