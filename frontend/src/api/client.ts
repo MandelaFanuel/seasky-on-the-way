@@ -3,8 +3,9 @@
  * SeaSky Platform - API v1 Client (Docker-ready + Browser-ready)
  * ✅ JWT-first (no cookies)
  * ✅ Works in:
- *   - Browser dev: http://localhost:8000/api/v1
- *   - Docker compose: http://backend:8000/api/v1
+ *   - Browser (Vercel/Prod): /api/v1  (proxied by vercel.json)
+ *   - Browser (Local):       http://localhost:8000/api/v1  OR /api/v1 with Vite proxy
+ *   - Docker compose:        http://backend:8000/api/v1
  * ✅ Safe URL normalization
  * ✅ Keeps real HTTP errors (403/401/400...)
  */
@@ -32,43 +33,30 @@ function isBrowser() {
 }
 
 /**
- * ✅ Default base URL
- * - If frontend is behind a reverse proxy (same origin), prefer "/api/v1"
- * - Otherwise use host:8000
+ * ✅ Default base URL (IMPORTANT):
+ * - In browser (Vercel/HTTPS): use SAME-ORIGIN proxy => "/api/v1"
+ * - In local browser: you can set VITE_API_URL=http://localhost:8000/api/v1 (or keep "/api/v1" with Vite proxy)
+ * - In Docker: http://backend:8000/api/v1
  */
 function defaultBaseUrl() {
   if (isBrowser()) {
-    // If you later put everything behind one nginx domain, you can set:
-    // VITE_API_URL=/api/v1
-    const env = (import.meta as any)?.env?.VITE_API_URL;
-    if (typeof env === "string" && env.trim().startsWith("/")) return env.trim().replace(/\/+$/, "");
-
-    const host = window.location.hostname || "localhost";
-    return `http://${host}:8000/api/v1`;
+    // PRODUCTION SAFE DEFAULT (works on Vercel with rewrites)
+    return "/api/v1";
   }
   return "http://backend:8000/api/v1";
 }
 
 function normalizeBaseUrl(input?: string) {
   let url = (input ?? "").trim();
-
   if (!url) url = defaultBaseUrl();
 
   // allow relative "/api/v1"
-  if (url.startsWith("/")) {
-    // relative base is OK (same origin)
-    url = url.replace(/\/+$/, "");
-    return url;
-  }
+  if (url.startsWith("/")) return url.replace(/\/+$/, "");
 
   // ":8000/api/v1" -> browser: "http://localhost:8000/api/v1" or docker: "http://backend:8000/api/v1"
   if (url.startsWith(":")) {
-    if (isBrowser()) {
-      const host = window.location.hostname || "localhost";
-      url = `http://${host}${url}`;
-    } else {
-      url = `http://backend${url}`;
-    }
+    if (isBrowser()) url = `http://localhost${url}`;
+    else url = `http://backend${url}`;
   }
 
   // "backend:8000/api/v1" -> add protocol
@@ -76,15 +64,14 @@ function normalizeBaseUrl(input?: string) {
     url = `http://${url}`;
   }
 
-  url = url.replace(/\/+$/, "");
-  return url;
+  return url.replace(/\/+$/, "");
 }
 
 /**
  * Prefer VITE_API_URL.
- * - Browser dev: VITE_API_URL=http://localhost:8000/api/v1
- * - Docker:      VITE_API_URL=http://backend:8000/api/v1
- * - ReverseProxy:VITE_API_URL=/api/v1
+ * - Vercel/Prod:  VITE_API_URL=/api/v1   (recommended)
+ * - Local:        VITE_API_URL=http://localhost:8000/api/v1  (optional)
+ * - Docker:       VITE_API_URL=http://backend:8000/api/v1
  */
 export const API_BASE_URL = normalizeBaseUrl((import.meta as any).env?.VITE_API_URL);
 
@@ -96,9 +83,7 @@ export const ENDPOINTS = {
     LOGOUT_ALL: "/auth/logout_all/",
     REFRESH: "/auth/refresh/",
   },
-  QR: {
-    SCAN: "/qr/scan/",
-  },
+  QR: { SCAN: "/qr/scan/" },
   ME: {
     PROFILE: "/me/profile/",
     UPDATE_PROFILE: "/me/update_profile/",
@@ -145,19 +130,13 @@ export type UserProfile = {
   email?: string;
   full_name?: string;
   phone?: string;
-
-  // backend-provided fields (may vary)
   role?: string;
   account_type?: string;
-
-  // ✅ important for admin detection
   is_superuser?: boolean;
   is_staff?: boolean;
-
   is_active?: boolean;
   date_joined?: string;
   last_login?: string;
-
   [key: string]: any;
 };
 
@@ -165,19 +144,8 @@ export type QRScanResponse = {
   success?: boolean;
   data?: any;
   message?: string;
-  token?: {
-    code?: string;
-    purpose?: string;
-    ttl_seconds?: number;
-    expires_at?: string;
-  };
-  subject?: {
-    id?: number;
-    type?: string;
-    name?: string;
-    full_name?: string;
-    username?: string;
-  };
+  token?: { code?: string; purpose?: string; ttl_seconds?: number; expires_at?: string };
+  subject?: { id?: number; type?: string; name?: string; full_name?: string; username?: string };
   [key: string]: any;
 };
 
@@ -206,7 +174,6 @@ export type CreateCollectionPayload = {
   [key: string]: any;
 };
 
-// ========================= PDV TYPES =========================
 export type PDVStock = {
   current_liters?: string | number;
   last_event_at?: string | null;
@@ -219,19 +186,14 @@ export type PDV = {
   province?: string;
   commune?: string;
   address?: string;
-
   agent_username?: string;
   agent_full_name?: string;
   agent_phone?: string;
-
   partner_username?: string | null;
   partner_full_name?: string | null;
-
   stock?: PDVStock;
-
   created_at?: string;
   updated_at?: string;
-
   [k: string]: any;
 };
 
@@ -253,7 +215,6 @@ class TokenStorage {
     if (!isBrowser()) return null;
     return localStorage.getItem("seasky_access_token") || localStorage.getItem("access_token");
   }
-
   static set access(token: string | null) {
     if (!isBrowser()) return;
     if (!token) {
@@ -269,7 +230,6 @@ class TokenStorage {
     if (!isBrowser()) return null;
     return localStorage.getItem("seasky_refresh_token") || localStorage.getItem("refresh_token");
   }
-
   static set refresh(token: string | null) {
     if (!isBrowser()) return;
     if (!token) {
@@ -313,11 +273,14 @@ function withTimeout(ms = 20000) {
 
 function joinUrl(base: string, path: string) {
   const safePath = path.startsWith("/") ? path : `/${path}`;
-
-  // if base is relative "/api/v1"
   if (base.startsWith("/")) return `${base}${safePath}`;
-
   return `${base}${safePath}`;
+}
+
+function fetchModeForBase(base: string): RequestMode {
+  // same-origin proxy on Vercel => no CORS
+  if (base.startsWith("/")) return "same-origin";
+  return "cors";
 }
 
 export async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
@@ -338,7 +301,7 @@ export async function request<T>(path: string, opts: RequestInit = {}): Promise<
     if (isDebug()) console.log("[SeaSky API] ->", opts.method || "GET", url);
 
     const res = await fetch(url, {
-      mode: "cors",
+      mode: fetchModeForBase(API_BASE_URL),
       credentials: "omit",
       ...opts,
       headers,
@@ -362,7 +325,6 @@ export async function request<T>(path: string, opts: RequestInit = {}): Promise<
       throw new SeaSkyApiError("Timeout: le serveur met trop de temps à répondre.", undefined, { url });
     }
 
-    // ✅ connection refused / network down
     throw new SeaSkyApiError("Serveur injoignable (backend down ou URL incorrecte).", undefined, {
       url,
       original: String(e?.message || e),
@@ -429,12 +391,10 @@ export function clearAuth(): void {
   TokenStorage.clear();
 }
 
-/** ✅ current user profile */
 export async function getCurrentUser(): Promise<UserProfile> {
   return request<UserProfile>(ENDPOINTS.ME.PROFILE, { method: "GET" });
 }
 
-/** ✅ helper: compute role correctly (superuser/staff first) */
 export function computeEffectiveRole(p?: UserProfile | null): string {
   if (!p) return "client";
   if (p.is_superuser || p.is_staff) return "admin";
@@ -463,7 +423,6 @@ export async function updateUserProfile(payload: FormData | Json): Promise<UserP
   });
 }
 
-// ========================= PDV API =========================
 export async function getMyPDV(): Promise<PDV> {
   return request<PDV>(ENDPOINTS.PDV.MY, { method: "GET" });
 }

@@ -10,7 +10,7 @@
     },
     {
       "src": "/api/(.*)",
-      "dest": "https://seasky-backend.onrender.com/api/$1"
+      "dest": "https://seasky-backend.onrender.com/api/v1/$1"
     },
     {
       "src": "/(.*)",
