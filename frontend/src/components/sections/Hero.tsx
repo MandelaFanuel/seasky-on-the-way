@@ -34,7 +34,7 @@ const Hero: React.FC = () => {
 
   const possibleImagePaths = [
     "/images/seasky8.webp", // ✅ public/images/seasky8.webp
-    "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&q=80",
+    // "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&q=80",
   ];
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
