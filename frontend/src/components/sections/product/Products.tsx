@@ -1,19 +1,22 @@
+// ========================= src/components/sections/product/pages/Products.tsx =========================
 import React, { useEffect, useRef, useState } from "react";
 import { useCart } from "../product/CartContext";
 import Navigation from "../../layout/Navigation";
 import Footer from "../../sections/Footer";
 import { Link } from "react-router-dom";
+import SeaSkyMilkTitleCard from "../../sections/shared/SeaSkyMilkTitleCard";
 
-// Images
-import img1 from "../../../../public/images/seasky1.webp";
-import img2 from "../../../../public/images/seasky2.webp";
-import img3 from "../../../../public/images/seasky3.webp";
-import img4 from "../../../../public/images/seasky11.webp";
-import img5 from "../../../../public/images/seasky5.webp";
-import img6 from "../../../../public/images/seasky9.webp";
-import img7 from "../../../../public/images/seasky7.webp";
-import img8 from "../../../../public/images/seasky8.webp";
-import house from "../../../../public/images/House.jpg";
+// ✅ IMPORTANT (Vite + Vercel):
+// Assets dans /public => on utilise des URLs absolues (pas d'import depuis public)
+const img1 = "/images/seasky1.webp";
+const img2 = "/images/seasky2.webp";
+const img3 = "/images/seasky3.webp";
+const img4 = "/images/seasky11.webp";
+const img5 = "/images/seasky5.webp";
+const img6 = "/images/seasky9.webp";
+const img7 = "/images/seasky7.webp";
+const img8 = "/images/seasky8.webp";
+const house = "/images/House.jpg";
 
 // ---------------------- Icônes ----------------------
 const HeartIcon: React.FC<{ className?: string }> = ({ className = "" }) => (
@@ -89,8 +92,7 @@ function useOutsideClose(ref: React.RefObject<HTMLElement>, onClose: () => void)
 }
 
 // Normalisation pour recherche (accents/majuscules)
-const normalize = (s: string) =>
-  s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 // ---------------------- Filtres ----------------------
 const FilterDropdown: React.FC<{
@@ -122,9 +124,7 @@ const FilterDropdown: React.FC<{
             <button
               key={option.value}
               className={`block w-full text-left px-4 py-2 text-sm transition-colors duration-150 ${
-                selected === option.value
-                  ? "bg-blue-50 text-blue-700 font-medium"
-                  : "text-gray-700 hover:bg-gray-50"
+                selected === option.value ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-700 hover:bg-gray-50"
               }`}
               onClick={() => {
                 onSelect(option.value);
@@ -171,9 +171,7 @@ const SortDropdown: React.FC<{
             <button
               key={option.value}
               className={`block w-full text-left px-4 py-2 text-sm transition-colors duration-150 ${
-                selected === option.value
-                  ? "bg-blue-50 text-blue-700 font-medium"
-                  : "text-gray-700 hover:bg-gray-50"
+                selected === option.value ? "bg-blue-50 text-blue-700 font-medium" : "text-gray-700 hover:bg-gray-50"
               }`}
               onClick={() => {
                 onSelect(option.value);
@@ -283,19 +281,13 @@ const ProductCard: React.FC<{
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-gray-700">Quantité:</span>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setQuantity((q) => Math.max(30, q - 1))}
-                  className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center"
-                  aria-label="Diminuer la quantité"
-                >
+                <button onClick={() => setQuantity((q) => Math.max(30, q - 1))} className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center" aria-label="Diminuer la quantité">
                   -
                 </button>
-                <span className="w-8 text-center" aria-live="polite">{quantity}</span>
-                <button
-                  onClick={() => setQuantity((q) => q + 1)}
-                  className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center"
-                  aria-label="Augmenter la quantité"
-                >
+                <span className="w-8 text-center" aria-live="polite">
+                  {quantity}
+                </span>
+                <button onClick={() => setQuantity((q) => q + 1)} className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center" aria-label="Augmenter la quantité">
                   +
                 </button>
               </div>
@@ -337,7 +329,6 @@ const Products: React.FC = () => {
   };
 
   const filteredProducts = PRODUCT_LIST.filter((product) => {
-    // Recherche temps réel (nom + sous-titre)
     const q = normalize(searchQuery);
     if (q && !normalize(product.name).includes(q) && !normalize(product.subtitle).includes(q)) return false;
 
@@ -424,7 +415,6 @@ const Products: React.FC = () => {
     { value: "rating-desc", label: "Meilleures notes" },
   ];
 
-  // Scroll helper pour le bouton « Acheter maintenant »
   const scrollToProducts = () => {
     productsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
@@ -434,11 +424,13 @@ const Products: React.FC = () => {
       <Navigation />
 
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6 mt-20">
+        {/* ==================== Bandeau titre style HERO (réutilisable) ==================== */}
+        <div className="mt-2 mb-6">
+          <SeaSkyMilkTitleCard variant="page" align="left" />
+        </div>
+
         {/* ---------------- Bandeau Promo ---------------- */}
-        <section
-          aria-label="Promotion jusqu'à 50% sur produits laitiers"
-          className="mt-6 overflow-hidden rounded-2xl bg-[#e4f4fd]"
-        >
+        <section aria-label="Promotion jusqu'à 50% sur produits laitiers" className="mt-6 overflow-hidden rounded-2xl bg-[#e4f4fd]">
           <div className="grid grid-cols-1 md:grid-cols-2 items-stretch gap-6 p-5 sm:p-6 md:p-8">
             {/* Colonne texte */}
             <div className="order-2 md:order-1 flex flex-col justify-center">
@@ -481,12 +473,7 @@ const Products: React.FC = () => {
             {/* Colonne image */}
             <div className="order-1 md:order-2 flex items-center justify-center">
               <div className="relative w-full max-w-[640px] aspect-16/10 sm:aspect-video overflow-hidden rounded-2xl">
-                <img
-                  src={house}
-                  alt="Siège Principal SeaSky Lait - Bujumbura, Burundi"
-                  className="absolute inset-0 h-full w-full object-cover will-change-transform"
-                  loading="eager"
-                />
+                <img src={house} alt="Siège Principal SeaSky Lait - Bujumbura, Burundi" className="absolute inset-0 h-full w-full object-cover will-change-transform" loading="eager" />
               </div>
             </div>
           </div>
@@ -495,36 +482,11 @@ const Products: React.FC = () => {
         {/* ---------------- Filtres, recherche & tri ---------------- */}
         <div ref={productsRef} className="mt-6 flex flex-col items-stretch justify-between gap-4 sm:flex-row">
           <div className="flex flex-wrap gap-2">
-            <FilterDropdown
-              label="Type de produit"
-              options={filterOptions.type}
-              selected={filters.type}
-              onSelect={(value) => setFilters({ ...filters, type: value as ProductType })}
-            />
-            <FilterDropdown
-              label="Prix"
-              options={filterOptions.price}
-              selected={filters.price}
-              onSelect={(value) => setFilters({ ...filters, price: value as PriceRange })}
-            />
-            <FilterDropdown
-              label="Évaluation"
-              options={filterOptions.rating}
-              selected={filters.rating}
-              onSelect={(value) => setFilters({ ...filters, rating: value as Rating })}
-            />
-            <FilterDropdown
-              label="Disponibilité"
-              options={filterOptions.availability}
-              selected={filters.availability}
-              onSelect={(value) => setFilters({ ...filters, availability: value as Availability })}
-            />
-            <FilterDropdown
-              label="Promotions"
-              options={filterOptions.promotion}
-              selected={filters.promotion}
-              onSelect={(value) => setFilters({ ...filters, promotion: value as Promotion })}
-            />
+            <FilterDropdown label="Type de produit" options={filterOptions.type} selected={filters.type} onSelect={(value) => setFilters({ ...filters, type: value as ProductType })} />
+            <FilterDropdown label="Prix" options={filterOptions.price} selected={filters.price} onSelect={(value) => setFilters({ ...filters, price: value as PriceRange })} />
+            <FilterDropdown label="Évaluation" options={filterOptions.rating} selected={filters.rating} onSelect={(value) => setFilters({ ...filters, rating: value as Rating })} />
+            <FilterDropdown label="Disponibilité" options={filterOptions.availability} selected={filters.availability} onSelect={(value) => setFilters({ ...filters, availability: value as Availability })} />
+            <FilterDropdown label="Promotions" options={filterOptions.promotion} selected={filters.promotion} onSelect={(value) => setFilters({ ...filters, promotion: value as Promotion })} />
           </div>
 
           {/* Recherche + compteur + tri */}
@@ -543,12 +505,7 @@ const Products: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z" />
               </svg>
               {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  aria-label="Effacer la recherche"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-400 hover:text-gray-600"
-                >
+                <button type="button" onClick={() => setSearchQuery("")} aria-label="Effacer la recherche" className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-400 hover:text-gray-600">
                   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -573,12 +530,7 @@ const Products: React.FC = () => {
         {/* ---------------- Grille produits ---------------- */}
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {sortedProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onAddToCart={handleAddToCart}
-              showBulkOption={showBulkOnly}
-            />
+            <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} showBulkOption={showBulkOnly} />
           ))}
         </div>
 
@@ -641,9 +593,7 @@ const Products: React.FC = () => {
                 <svg className="h-16 w-16 text-white mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
-                <p className="text-center text-white/90 text-sm">
-                  Rejoignez une communauté de plus de 50 livreurs qui font confiance à SeaSky
-                </p>
+                <p className="text-center text-white/90 text-sm">Rejoignez une communauté de plus de 50 livreurs qui font confiance à SeaSky</p>
               </div>
             </div>
           </div>

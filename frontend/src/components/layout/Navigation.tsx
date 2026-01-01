@@ -5,7 +5,6 @@ import { logout } from "../../store/store";
 import type { RootState } from "../../store/store";
 import Container from "./Container";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import logo from "../../../public/logos/seaskyLogo1.png";
 import { useCart } from "../../components/sections/product/CartContext";
 import { logoutUser } from "../../api/client";
 
@@ -56,6 +55,9 @@ const Navigation: React.FC = () => {
   // ✅ photo (redux) -> s'actualise automatiquement dès que updateProfile() met à jour auth.user
   const userPhotoUrl = useMemo(() => pickPhotoUrl(user), [user]);
 
+  // ✅ IMPORTANT (Vite + Vercel): assets dans public => URL directe
+  const logo = "/logos/seaskyLogo1.png";
+
   const provinces = useMemo(
     () => [
       "Bujumbura Mairie",
@@ -85,6 +87,7 @@ const Navigation: React.FC = () => {
   const closeMenu = () => {
     setIsMenuOpen(false);
     setIsUserMenuOpen(false);
+    setIsProvincesOpen(false);
   };
 
   const toggleProvinces = () => setIsProvincesOpen((p) => !p);
@@ -323,16 +326,28 @@ const Navigation: React.FC = () => {
       <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 mx-auto">
         <div className="flex items-center justify-between py-3 lg:py-4">
           {/* Logo Section */}
-          <Link to="/" className="flex items-center gap-3 shrink-0">
-            <div className="w-12 h-12 lg:w-16 lg:h-16 flex items-center justify-center">
+          <Link to="/" className="flex items-center gap-3 shrink-0 min-w-0">
+            <div className="w-12 h-12 lg:w-16 lg:h-16 flex items-center justify-center shrink-0">
               <img src={logo} alt="SeaSky Logo" className="w-full h-full object-contain" />
             </div>
 
-            <div className="hidden sm:block">
-              <p className="text-xs font-medium" style={{ color: SeaSkyColors.steelBlue }}>
+            {/* ✅ FIX: Ne plus cacher le titre en responsive
+                - Avant: hidden sm:block (caché sur xs)
+                - Maintenant: block (toujours visible) + tailles adaptées + truncate si nécessaire
+            */}
+            <div className="block min-w-0">
+              <p
+                className="text-[11px] sm:text-xs font-medium leading-tight truncate"
+                style={{ color: SeaSkyColors.steelBlue }}
+                title="Lait Premium"
+              >
                 Lait Premium
               </p>
-              <p className="font-serif text-lg lg:text-xl font-bold" style={{ color: SeaSkyColors.dark }}>
+              <p
+                className="font-serif text-base sm:text-lg lg:text-xl font-bold leading-tight truncate"
+                style={{ color: SeaSkyColors.dark }}
+                title="SeaSky On The Way"
+              >
                 SeaSky On The Way
               </p>
             </div>
@@ -579,7 +594,13 @@ const Navigation: React.FC = () => {
             <div className="py-4">
               <div className="flex flex-col space-y-4">
                 {/* Liens principaux */}
-                <a href="#milk" onClick={handleMilkClick} className="flex items-center gap-3 font-medium py-2 px-2 rounded-lg transition-colors" style={{ color: SeaSkyColors.inkBlue }} {...hoverHandlersLight}>
+                <a
+                  href="#milk"
+                  onClick={handleMilkClick}
+                  className="flex items-center gap-3 font-medium py-2 px-2 rounded-lg transition-colors"
+                  style={{ color: SeaSkyColors.inkBlue }}
+                  {...hoverHandlersLight}
+                >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
                       strokeLinecap="round"
@@ -593,7 +614,12 @@ const Navigation: React.FC = () => {
 
                 {/* Points de vente */}
                 <div>
-                  <button type="button" className="flex items-center gap-3 font-medium py-2 px-2 rounded-lg transition-colors w-full text-left" style={{ color: SeaSkyColors.inkBlue }} onClick={toggleProvinces}>
+                  <button
+                    type="button"
+                    className="flex items-center gap-3 font-medium py-2 px-2 rounded-lg transition-colors w-full text-left"
+                    style={{ color: SeaSkyColors.inkBlue }}
+                    onClick={toggleProvinces}
+                  >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -622,7 +648,13 @@ const Navigation: React.FC = () => {
                   )}
                 </div>
 
-                <a href="#pharmacies" className="flex items-center gap-3 font-medium py-2 px-2 rounded-lg transition-colors" style={{ color: SeaSkyColors.inkBlue }} {...hoverHandlersLight} onClick={closeMenu}>
+                <a
+                  href="#pharmacies"
+                  className="flex items-center gap-3 font-medium py-2 px-2 rounded-lg transition-colors"
+                  style={{ color: SeaSkyColors.inkBlue }}
+                  {...hoverHandlersLight}
+                  onClick={closeMenu}
+                >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
@@ -630,14 +662,26 @@ const Navigation: React.FC = () => {
                   Pharmacies
                 </a>
 
-                <a href="#about" className="flex items-center gap-3 font-medium py-2 px-2 rounded-lg transition-colors" style={{ color: SeaSkyColors.inkBlue }} {...hoverHandlersLight} onClick={closeMenu}>
+                <a
+                  href="#about"
+                  className="flex items-center gap-3 font-medium py-2 px-2 rounded-lg transition-colors"
+                  style={{ color: SeaSkyColors.inkBlue }}
+                  {...hoverHandlersLight}
+                  onClick={closeMenu}
+                >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   À propos
                 </a>
 
-                <a href="#contact" className="flex items-center gap-3 font-medium py-2 px-2 rounded-lg transition-colors" style={{ color: SeaSkyColors.inkBlue }} {...hoverHandlersLight} onClick={closeMenu}>
+                <a
+                  href="#contact"
+                  className="flex items-center gap-3 font-medium py-2 px-2 rounded-lg transition-colors"
+                  style={{ color: SeaSkyColors.inkBlue }}
+                  {...hoverHandlersLight}
+                  onClick={closeMenu}
+                >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
                       strokeLinecap="round"
@@ -650,7 +694,13 @@ const Navigation: React.FC = () => {
                 </a>
 
                 {/* Panier mobile */}
-                <Link to="/cart" className="flex items-center gap-3 font-medium py-2 px-2 rounded-lg transition-colors" style={{ color: SeaSkyColors.inkBlue }} {...hoverHandlersLight} onClick={closeMenu}>
+                <Link
+                  to="/cart"
+                  className="flex items-center gap-3 font-medium py-2 px-2 rounded-lg transition-colors"
+                  style={{ color: SeaSkyColors.inkBlue }}
+                  {...hoverHandlersLight}
+                  onClick={closeMenu}
+                >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
@@ -672,7 +722,13 @@ const Navigation: React.FC = () => {
                       </div>
                     </div>
 
-                    <Link to="/dashboard" className="flex items-center gap-3 font-medium py-2 px-2 rounded-lg transition-colors mb-2" style={{ color: SeaSkyColors.inkBlue }} {...hoverHandlersLight} onClick={closeMenu}>
+                    <Link
+                      to="/dashboard"
+                      className="flex items-center gap-3 font-medium py-2 px-2 rounded-lg transition-colors mb-2"
+                      style={{ color: SeaSkyColors.inkBlue }}
+                      {...hoverHandlersLight}
+                      onClick={closeMenu}
+                    >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
                       </svg>
@@ -691,7 +747,13 @@ const Navigation: React.FC = () => {
                     </button>
                   </div>
                 ) : (
-                  <Link to="/login" className="flex items-center gap-3 font-medium py-2 px-2 rounded-lg transition-colors" style={{ color: SeaSkyColors.inkBlue }} {...hoverHandlersLight} onClick={closeMenu}>
+                  <Link
+                    to="/login"
+                    className="flex items-center gap-3 font-medium py-2 px-2 rounded-lg transition-colors"
+                    style={{ color: SeaSkyColors.inkBlue }}
+                    {...hoverHandlersLight}
+                    onClick={closeMenu}
+                  >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                     </svg>

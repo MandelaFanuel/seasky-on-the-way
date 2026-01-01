@@ -121,7 +121,6 @@ const Milk: React.FC = () => {
   const [quantities, setQuantities] = useState<number[]>(() => products.map(() => 1));
 
   useEffect(() => {
-    // ✅ sync si products change
     setQuantities(products.map(() => 1));
   }, [products]);
 
@@ -186,8 +185,6 @@ const Milk: React.FC = () => {
   };
 
   const addToCart = (productId: number, quantity: number) => {
-    // branche ton vrai panier ici si tu veux
-    // eslint-disable-next-line no-console
     console.log(`Ajout au panier: Produit ${productId}, Quantité: ${quantity}`);
   };
 
@@ -195,7 +192,6 @@ const Milk: React.FC = () => {
   const closeProductDetails = () => setSelectedProduct(null);
 
   const orderProduct = (productId: number, quantity: number) => {
-    // eslint-disable-next-line no-console
     console.log(`Commande: Produit ${productId}, Quantité: ${quantity}`);
     closeProductDetails();
   };
@@ -204,7 +200,6 @@ const Milk: React.FC = () => {
 
   return (
     <section id="milk" className="py-20 bg-linear-to-b from-white to-[#E4F5FB] relative">
-      {/* ✅ overlay mini loading */}
       <div
         className={`pointer-events-none absolute inset-0 z-10 flex items-center justify-center transition-all duration-500 ${
           pageReady ? "opacity-0" : "opacity-100"
@@ -228,66 +223,73 @@ const Milk: React.FC = () => {
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div className="relative">
-              {/* Galerie empilée */}
-              <div className="relative">
-                <div className="relative rounded-3xl overflow-hidden shadow-2xl z-30 transform rotate-1 transition-transform duration-300 hover:rotate-0">
-                  <img
-                    src={products[0].image}
-                    alt={products[0].alt}
-                    className="w-full h-[400px] object-cover cursor-pointer"
-                    onClick={() => openProductDetails(products[0])}
-                  />
-                  <div className="absolute inset-0 bg-linear-to-t from-black/30 to-transparent" />
-                  <div className="absolute bottom-4 left-4 text-white">
-                    <h3 className="font-semibold">{products[0].title}</h3>
-                    <p className="text-sm">
-                      {products[0].price.toLocaleString()} {products[0].currency}
-                    </p>
+            {/* ✅ Wrapper responsive: garde de l'espace à gauche & droite sur mobile */}
+            <div className="relative px-8 sm:px-0">
+              {/* ✅ Center + max-width mobile pour éviter que ça colle aux bords */}
+              <div className="mx-auto w-full max-w-[520px] sm:max-w-none">
+                {/* ✅ hauteur globale plus petite sur mobile */}
+                <div className="relative h-[320px] sm:h-[440px] lg:h-[440px]">
+                  {/* Image principale */}
+                  <div className="relative rounded-3xl overflow-hidden shadow-2xl z-30 transform rotate-1 transition-transform duration-300 hover:rotate-0">
+                    <img
+                      src={products[0].image}
+                      alt={products[0].alt}
+                      className="w-full h-[280px] sm:h-[400px] object-cover cursor-pointer"
+                      onClick={() => openProductDetails(products[0])}
+                    />
+                    <div className="absolute inset-0 bg-linear-to-t from-black/30 to-transparent" />
+                    <div className="absolute bottom-4 left-4 text-white">
+                      <h3 className="font-semibold">{products[0].title}</h3>
+                      <p className="text-sm">
+                        {products[0].price.toLocaleString()} {products[0].currency}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 2e image (derrière) */}
+                  <div className="absolute top-3 sm:top-4 -left-3 sm:-left-4 w-[88%] sm:w-[90%] h-[260px] sm:h-[380px] rounded-3xl overflow-hidden shadow-xl z-20 transform -rotate-2 transition-transform duration-300 hover:rotate-0">
+                    <img
+                      src={products[1].image}
+                      alt={products[1].alt}
+                      className="w-full h-full object-cover cursor-pointer"
+                      onClick={() => openProductDetails(products[1])}
+                    />
+                    <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent" />
+                  </div>
+
+                  {/* 3e image */}
+                  <div className="absolute top-6 sm:top-8 -left-6 sm:-left-8 w-[78%] sm:w-[80%] h-[240px] sm:h-[360px] rounded-3xl overflow-hidden shadow-lg z-10 transform rotate-3 transition-transform duration-300 hover:rotate-0">
+                    <img
+                      src={products[2].image}
+                      alt={products[2].alt}
+                      className="w-full h-full object-cover cursor-pointer"
+                      onClick={() => openProductDetails(products[2])}
+                    />
+                    <div className="absolute inset-0 bg-linear-to-t from-black/10 to-transparent" />
+                  </div>
+
+                  {/* 4e image */}
+                  <div className="absolute top-9 sm:top-12 -left-9 sm:-left-12 w-[68%] sm:w-[70%] h-[220px] sm:h-[340px] rounded-3xl overflow-hidden shadow-md z-0 transform -rotate-4 transition-transform duration-300 hover:rotate-0">
+                    <img
+                      src={products[3].image}
+                      alt={products[3].alt}
+                      className="w-full h-full object-cover cursor-pointer"
+                      onClick={() => openProductDetails(products[3])}
+                    />
+                    <div className="absolute inset-0 bg-linear-to-t from-black/5 to-transparent" />
                   </div>
                 </div>
 
-                <div className="absolute top-4 -left-4 w-[90%] h-[380px] rounded-3xl overflow-hidden shadow-xl z-20 transform -rotate-2 transition-transform duration-300 hover:rotate-0">
-                  <img
-                    src={products[1].image}
-                    alt={products[1].alt}
-                    className="w-full h-full object-cover cursor-pointer"
-                    onClick={() => openProductDetails(products[1])}
-                  />
-                  <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent" />
+                {/* Badges flottants */}
+                <div className="absolute -top-4 -right-4 bg-white rounded-2xl shadow-xl p-4 text-center z-40">
+                  <div className="text-2xl font-bold text-[#0B568C]">⭐</div>
+                  <div className="text-xs text-[#335F7A]">Premium</div>
                 </div>
 
-                <div className="absolute top-8 -left-8 w-[80%] h-[360px] rounded-3xl overflow-hidden shadow-lg z-10 transform rotate-3 transition-transform duration-300 hover:rotate-0">
-                  <img
-                    src={products[2].image}
-                    alt={products[2].alt}
-                    className="w-full h-full object-cover cursor-pointer"
-                    onClick={() => openProductDetails(products[2])}
-                  />
-                  <div className="absolute inset-0 bg-linear-to-t from-black/10 to-transparent" />
-                </div>
-
-                <div className="absolute top-12 -left-12 w-[70%] h-[340px] rounded-3xl overflow-hidden shadow-md z-0 transform -rotate-4 transition-transform duration-300 hover:rotate-0">
-                  <img
-                    src={products[3].image}
-                    alt={products[3].alt}
-                    className="w-full h-full object-cover cursor-pointer"
-                    onClick={() => openProductDetails(products[3])}
-                  />
-                  <div className="absolute inset-0 bg-linear-to-t from-black/5 to-transparent" />
-                </div>
-              </div>
-
-              {/* Badge qualité */}
-              <div className="absolute -top-4 -right-4 bg-white rounded-2xl shadow-xl p-4 text-center z-40">
-                <div className="text-2xl font-bold text-[#0B568C]">⭐</div>
-                <div className="text-xs text-[#335F7A]">Premium</div>
-              </div>
-
-              {/* Indicateur */}
-              <div className="absolute -bottom-4 -right-4 bg-white rounded-full p-2 shadow-lg z-40">
-                <div className="w-10 h-10 bg-[#0B568C] rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">+{products.length}</span>
+                <div className="absolute -bottom-4 -right-4 bg-white rounded-full p-4 shadow-lg z-40">
+                  <div className="w-12 h-12 bg-[#0B568C] rounded-full flex items-center justify-center">
+                    <span className="text-white text-sm font-bold">+{products.length}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -348,11 +350,10 @@ const Milk: React.FC = () => {
                 </ul>
               </div>
 
-              {/* ✅ Bouton vers /products */}
               <div className="text-center">
                 <button
                   onClick={() => navigate("/products")}
-                  className="inline-flex items-center justify-center bg-[#0B568C] text-white px-8 py-3 rounded-xl font-semibold hover:bg-[#1A4F75] transition-colors"
+                  className="inline-flex items-center justify-center bg-[#0B568C] text-white px-8 py-3 rounded-full font-semibold hover:bg-[#1A4F75] transition-colors shadow-lg hover:shadow-xl"
                 >
                   Explorer tous nos produits
                   <svg className="ml-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -365,7 +366,6 @@ const Milk: React.FC = () => {
         </div>
       </Container>
 
-      {/* Popup */}
       {selectedProduct && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -403,7 +403,6 @@ const Milk: React.FC = () => {
                 </ul>
               </div>
 
-              {/* Quantité + actions */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
                   <button
@@ -415,9 +414,7 @@ const Milk: React.FC = () => {
                     </svg>
                   </button>
 
-                  <span className="w-12 text-center font-semibold text-[#1A4F75] text-lg">
-                    {quantities[productIndex]}
-                  </span>
+                  <span className="w-12 text-center font-semibold text-[#1A4F75] text-lg">{quantities[productIndex]}</span>
 
                   <button
                     onClick={() => updateQuantity(productIndex, quantities[productIndex] + 1)}
