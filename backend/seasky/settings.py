@@ -1,6 +1,7 @@
 """
 Django settings for SeaSky Platform.
 JWT-first API (no cookies), Docker-ready, Vite-ready.
+Compatible django-storages / boto3 / Pillow (S3 optional via USE_S3).
 """
 
 from __future__ import annotations
@@ -19,15 +20,16 @@ sys.path.insert(0, str(BASE_DIR / "apps"))
 
 # ========================= ENVIRONMENT LOADING =========================
 ENV_FILE = BASE_DIR / ".env"
-
 IS_RENDER = bool(os.getenv("RENDER")) or bool(os.getenv("RENDER_SERVICE_ID"))
 
+# En local: charge .env
 if ENV_FILE.exists() and not IS_RENDER:
     load_dotenv(ENV_FILE, override=False)
 
 # ========================= HELPERS =========================
 def _split_csv(env_value: str) -> list[str]:
     return [o.strip() for o in (env_value or "").split(",") if o.strip()]
+
 
 def _bool_env(name: str, default: bool = False) -> bool:
     v = (os.getenv(name, "") or "").strip().lower()
@@ -37,15 +39,21 @@ def _bool_env(name: str, default: bool = False) -> bool:
         return False
     return default
 
+
+# ========================= APP META =========================
+APP_NAME = os.getenv("APP_NAME", "SeaSky API")
+APP_VERSION = os.getenv("APP_VERSION", "1.0.0")
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development" if not IS_RENDER else "production")
+
 # ========================= SECURITY CONFIGURATION =========================
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-dev-key-change-in-production-2025")
 DEBUG = _bool_env("DJANGO_DEBUG", default=True)
 
 if not DEBUG:
+    # Render/proxy HTTPS
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # ========================= HOST CONFIGURATION =========================
-# ✅ Ajout du domaine Render exact (important)
 DEFAULT_ALLOWED_HOSTS = "127.0.0.1,localhost,0.0.0.0,backend,.onrender.com,seasky-backend.onrender.com"
 ALLOWED_HOSTS_STRING = os.getenv("ALLOWED_HOSTS", DEFAULT_ALLOWED_HOSTS)
 ALLOWED_HOSTS = _split_csv(ALLOWED_HOSTS_STRING)
@@ -69,9 +77,13 @@ THIRD_PARTY_APPS = [
     "drf_spectacular",
     "corsheaders",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",  # ✅ requis si tu utilises blacklist()
     "django_filters",
     "django_redis",
-    "channels",  # ✅ indispensable pour ASGI/websocket
+    "channels",
+
+    # ✅ django-storages (boto3 backend)
+    "storages",
 ]
 
 if DEBUG and _bool_env("ENABLE_DEBUG_TOOLBAR", default=True):
@@ -95,14 +107,10 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
-
     "django.contrib.sessions.middleware.SessionMiddleware",
-
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
-
     "django.middleware.csrf.CsrfViewMiddleware",
-
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -115,7 +123,7 @@ if DEBUG and "debug_toolbar" in INSTALLED_APPS:
 ROOT_URLCONF = "seasky.urls"
 
 WSGI_APPLICATION = "seasky.wsgi.application"
-ASGI_APPLICATION = "seasky.asgi.application"  # ✅ IMPORTANT
+ASGI_APPLICATION = "seasky.asgi.application"
 
 TEMPLATES = [
     {
@@ -162,9 +170,6 @@ else:
         }
     }
 
-if DATABASE_URL and not dj_database_url:
-    print("⚠️ DATABASE_URL fourni mais dj-database-url n'est pas installé. Ajoute-le pour prod.")
-
 # ========================= CACHE & REDIS =========================
 REDIS_LOCATION = os.getenv("REDIS_URL", "redis://redis:6379/1")
 
@@ -188,7 +193,7 @@ CACHES = {
     }
 }
 
-# ✅ Channels Redis layer (recommandé pour websockets en prod)
+# ✅ Channels Redis layer
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
@@ -206,10 +211,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # ========================= INTERNATIONALIZATION =========================
 LANGUAGE_CODE = "fr-fr"
-
-# ✅ Render t'a refusé TIME_ZONE comme key: utilise DJANGO_TIME_ZONE
 TIME_ZONE = os.getenv("DJANGO_TIME_ZONE", "Africa/Bujumbura")
-
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
@@ -221,12 +223,70 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 _static_dir = BASE_DIR / "static"
 STATICFILES_DIRS = [_static_dir] if _static_dir.exists() else []
 
+# WhiteNoise: static collectstatic
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = str(BASE_DIR / "media")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ========================= STORAGE (LOCAL / S3) =========================
+# ✅ Active S3 uniquement si USE_S3=1
+USE_S3 = _bool_env("USE_S3", default=False)
+
+if USE_S3:
+    # --- AWS S3 / compatible Spaces/MinIO via endpoint ---
+    AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
+    AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+    AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME", "")
+    AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "") or None
+
+    # optionnel: pour DigitalOcean Spaces / MinIO / autre S3-compatible
+    AWS_S3_ENDPOINT_URL = os.getenv("AWS_S3_ENDPOINT_URL", "") or None
+
+    # optionnel: CDN/custom domain
+    AWS_S3_CUSTOM_DOMAIN = os.getenv("AWS_S3_CUSTOM_DOMAIN", "") or None
+
+    AWS_DEFAULT_ACL = None
+
+    # Public URLs (mets True si tu veux URL signées)
+    AWS_QUERYSTRING_AUTH = _bool_env("AWS_QUERYSTRING_AUTH", default=False)
+
+    # Cache headers
+    AWS_S3_OBJECT_PARAMETERS = {"CacheControl": os.getenv("AWS_S3_CACHE_CONTROL", "max-age=86400")}
+
+    # Préfixes dans le bucket
+    AWS_LOCATION_MEDIA = (os.getenv("AWS_LOCATION_MEDIA", "media") or "media").strip().strip("/")
+    AWS_LOCATION_STATIC = (os.getenv("AWS_LOCATION_STATIC", "static") or "static").strip().strip("/")
+
+    # Pour éviter que boto3 rajoute des ACL par défaut
+    AWS_S3_FILE_OVERWRITE = False
+
+    # ✅ Django 4.2+ STORAGES
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+            "OPTIONS": {
+                "bucket_name": AWS_STORAGE_BUCKET_NAME,
+                "location": AWS_LOCATION_MEDIA,
+                "default_acl": None,
+                "querystring_auth": AWS_QUERYSTRING_AUTH,
+            },
+        },
+        # On garde WhiteNoise pour static (Render OK)
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+
+    # MEDIA_URL S3
+    if AWS_S3_CUSTOM_DOMAIN:
+        MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_LOCATION_MEDIA}/"
+    else:
+        # AWS standard domain (si endpoint custom, django-storages gère aussi les URLs)
+        if AWS_STORAGE_BUCKET_NAME:
+            MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{AWS_LOCATION_MEDIA}/"
 
 # ========================= REST FRAMEWORK (JWT FIRST) =========================
 REST_FRAMEWORK = {
@@ -288,13 +348,16 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 CORS_ALLOW_METHODS = list(default_methods)
 CORS_EXPOSE_HEADERS = ["Authorization", "Content-Type"]
 
-CSRF_TRUSTED_ORIGINS = _split_csv(os.getenv("CSRF_TRUSTED_ORIGINS", "")) or [
+# Permettre de configurer CSRF_TRUSTED_ORIGINS via env (comma separated)
+_env_csrf = _split_csv(os.getenv("CSRF_TRUSTED_ORIGINS", ""))
+_default_csrf = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
     "https://seasky-backend.onrender.com",
 ]
+CSRF_TRUSTED_ORIGINS = _env_csrf or _default_csrf
 
 CSRF_COOKIE_SAMESITE = os.getenv("CSRF_COOKIE_SAMESITE", "Lax")
 SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
@@ -305,9 +368,9 @@ if not DEBUG:
 
 # ========================= SPECTACULAR =========================
 SPECTACULAR_SETTINGS = {
-    "TITLE": os.getenv("APP_NAME", "SeaSky API"),
+    "TITLE": APP_NAME,
     "DESCRIPTION": "Plateforme de gestion et livraison de produits laitiers",
-    "VERSION": os.getenv("APP_VERSION", "1.0.0"),
+    "VERSION": APP_VERSION,
     "SERVE_INCLUDE_SCHEMA": False,
     "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
     "SWAGGER_UI_SETTINGS": {
@@ -393,3 +456,9 @@ if not DEBUG:
 if DEBUG and "debug_toolbar" in INSTALLED_APPS:
     DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda request: True}
     INTERNAL_IPS = ["127.0.0.1", "localhost"]
+
+# ========================= OTHER HELPERS =========================
+# flag to control whether Django serves media files in production (temporary fallback)
+SERVE_MEDIA = _bool_env("SERVE_MEDIA", default=False)
+
+# End of settings.py

@@ -1,46 +1,4 @@
-// ========================= src/services/api.ts =========================
 import axios, { type InternalAxiosRequestConfig } from "axios";
-
-function isBrowser() {
-  return typeof window !== "undefined";
-}
-
-function normalizeBaseUrl(input?: string) {
-  let url = (input ?? "").trim();
-
-  // ✅ IMPORTANT:
-  // - Browser/Vercel: use same-origin => "" (or "/")
-  // - Docker/local server can use VITE_API_URL_BASE if provided
-  if (!url) {
-    if (isBrowser()) return ""; // same-origin
-    return "http://backend:8000";
-  }
-
-  // allow relative "/api"
-  if (url.startsWith("/")) return url.replace(/\/+$/, "");
-
-  if (!/^https?:\/\//i.test(url) && /^[a-zA-Z0-9.-]+:\d+/.test(url)) {
-    url = `http://${url}`;
-  }
-
-  return url.replace(/\/+$/, "");
-}
-
-/**
- * ✅ base host like:
- * - Browser/Vercel: VITE_API_URL_BASE="" (default)
- * - Browser/local:  VITE_API_URL_BASE="http://localhost:8000"
- * - Docker:         VITE_API_URL_BASE="http://backend:8000"
- * baseURL MUST NOT include "/api/v1"
- */
-const API_HOST = normalizeBaseUrl((import.meta as any).env?.VITE_API_URL_BASE);
-const API_PREFIX = "/api/v1";
-
-const api = axios.create({
-  baseURL: API_HOST || undefined,
-  timeout: 20000,
-  headers: { Accept: "application/json" },
-});
 
 function getAccessToken(): string | null {
   try {
@@ -80,8 +38,14 @@ function ensureApiV1(url?: string) {
     return path;
   }
 
-  return normalizePath(`${API_PREFIX}${path}`);
+  return normalizePath(`/api/v1${path}`);
 }
+
+const api = axios.create({
+  baseURL: "",
+  timeout: 20000,
+  headers: { Accept: "application/json" },
+});
 
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {

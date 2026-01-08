@@ -1,3 +1,4 @@
+# ========================= seasky/urls.py =========================
 """
 URLs principales de la plateforme SeaSky.
 """
@@ -16,6 +17,7 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
+
 
 # ========================= HEALTH CHECK VIEW =========================
 def health_check(request):
@@ -71,7 +73,6 @@ def api_root(request):
     )
 
 
-# ========================= URL PATTERNS =========================
 urlpatterns = [
     # ========================= ADMIN =========================
     path("admin/", admin.site.urls),
@@ -93,19 +94,23 @@ urlpatterns = [
 ]
 
 
-# ========================= DEVELOPMENT SETTINGS =========================
+# ========================= Serve media/static conditionally =========================
+# - En dev (settings.DEBUG) on sert media/static automatiquement.
+# - En prod, on sert media/static seulement si SERVE_MEDIA=true (variable d'env)
 if settings.DEBUG:
-    # Debug toolbar
     if "debug_toolbar" in settings.INSTALLED_APPS:
         import debug_toolbar
         urlpatterns = [path("__debug__/", include(debug_toolbar.urls))] + urlpatterns
 
-    # Media files
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-    # Static files (dev only)
-    # (si STATIC_ROOT est vide, ça peut ne rien servir, mais ça ne casse pas)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+else:
+    # Fallback temporaire: si on veut que Django serve les fichiers en prod
+    # set SERVE_MEDIA=true dans les env du service (Render) ; recommandé uniquement temporaire
+    serve_media_flag = os.getenv("SERVE_MEDIA", "").strip().lower()
+    if serve_media_flag in ("1", "true", "yes", "on"):
+        urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+        urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 
 # ========================= ADMIN SITE CUSTOMIZATION =========================

@@ -1,7 +1,19 @@
 // ========================= src/pages/dashboard/UserDashboard.tsx =========================
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { useSelector } from "react-redux";
-import { Box, CircularProgress, Alert, alpha, useTheme, Button, useMediaQuery } from "@mui/material";
+import {
+  Box,
+  CircularProgress,
+  Alert,
+  alpha,
+  useTheme,
+  Button,
+  useMediaQuery,
+  Paper,
+  Typography,
+  Snackbar,
+  Alert as MuiAlert,
+} from "@mui/material";
 import api from "../../services/api";
 import { RootState } from "../../store/store";
 import { useNavigate } from "react-router-dom";
@@ -11,6 +23,9 @@ import UserDashboardContent from "./UserDashboardContent";
 import UserDashboardModals from "./UserDashboardModals";
 import MobileNavigationMenu from "./MobileNavigationMenu";
 import Footer from "../../components/sections/Footer";
+
+// ✅ IMPORT: Composant UserProfile intégré directement
+import UserProfile from "../profile/UserProfile";
 
 type ActivityItem = {
   id: number;
@@ -40,11 +55,36 @@ type WalletType = {
   currency: string;
 };
 
+const toAbsoluteMediaUrl = (maybeUrl?: string | null): string | null => {
+  const v = (maybeUrl || "").trim();
+  if (!v) return null;
+  if (v.startsWith("http://") || v.startsWith("https://") || v.startsWith("blob:")) return v;
+
+  const apiBase =
+    (import.meta as any)?.env?.VITE_API_BASE_URL ||
+    (import.meta as any)?.env?.VITE_API_URL ||
+    "http://localhost:8000/api/v1";
+
+  const baseUrl = String(apiBase).replace(/\/+$/, "").replace("/api/v1", "");
+  return `${baseUrl}${v.startsWith("/") ? "" : "/"}${v}`;
+};
+
+const getUserAvatarUrl = (u: any): string | null => {
+  return (
+    toAbsoluteMediaUrl(u?.photo_url) ||
+    toAbsoluteMediaUrl(u?.photo) ||
+    toAbsoluteMediaUrl(u?.profile_picture_url) ||
+    toAbsoluteMediaUrl(u?.profile_picture) ||
+    null
+  );
+};
+
 export default function UserDashboard() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const auth = useSelector((state: RootState) => state.auth);
   const user = (auth as any)?.user;
+
   const navigate = useNavigate();
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -63,6 +103,29 @@ export default function UserDashboard() {
 
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+
+  // ✅ Mode édition profil
+  const [isProfileEditMode, setIsProfileEditMode] = useState<boolean>(false);
+
+  // ✅ Avatar local (mise à jour immédiate après upload depuis UserProfile)
+  const [avatarOverride, setAvatarOverride] = useState<string | null>(null);
+
+  // ✅ Snackbar pour notifications (conservé pour d'autres usages)
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info' | 'warning';
+  }>({
+    open: false,
+    message: '',
+    severity: 'info'
+  });
+
+  // ✅ Avatar URL mémo : priorité à l'override après save, sinon user backend.
+  const avatarUrl = useMemo(() => {
+    return avatarOverride || getUserAvatarUrl(user);
+  }, [user, avatarOverride]);
+
   const [wallet, setWallet] = useState<WalletType>({
     id: 1,
     balance: 1250.75,
@@ -71,6 +134,14 @@ export default function UserDashboard() {
     status: "active",
     currency: "BIF",
   });
+
+  useEffect(() => {
+    setWallet((prev) => ({
+      ...prev,
+      account_number: user?.phone || prev.account_number,
+      phone_number: user?.phone || prev.phone_number,
+    }));
+  }, [user?.phone]);
 
   const [notifications, setNotifications] = useState<any[]>([
     { id: 1, title: "Nouvelle commande", message: "Commande #0012 confirmée", time: "2 min", read: false },
@@ -87,8 +158,20 @@ export default function UserDashboard() {
 
   const title = useMemo(() => {
     const name = user?.full_name || user?.username || "Collaborateur";
-    return `${greeting}, ${name.split(" ")[0]}`;
+    return `${greeting}, ${String(name).split(" ")[0]}`;
   }, [user, greeting]);
+
+  const handleGoProfile = () => {
+    setActiveTab(4);
+    setIsProfileEditMode(true);
+  };
+
+  // ✅ Quand on change d'onglet, si on quitte le profil => on désactive l'édition
+  useEffect(() => {
+    if (activeTab !== 4 && isProfileEditMode) {
+      setIsProfileEditMode(false);
+    }
+  }, [activeTab, isProfileEditMode]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -154,6 +237,30 @@ export default function UserDashboard() {
     setDeleteDialogOpen(false);
   };
 
+  // ✅ Callback déclenché quand UserProfile sauvegarde une nouvelle photo
+  const handleAvatarUpdated = useCallback((newUrl: string | null) => {
+    setAvatarOverride(newUrl ? toAbsoluteMediaUrl(newUrl) : null);
+    
+    // Afficher une notification de succès
+    setSnackbar({
+      open: true,
+      message: "Photo de profil mise à jour avec succès !",
+      severity: 'success'
+    });
+    
+    // Recharger les données pour synchronisation
+    loadData(true);
+  }, []);
+
+  // ✅ Toggle édition côté dashboard
+  const toggleProfileEditMode = useCallback(() => {
+    setIsProfileEditMode((prev) => !prev);
+  }, []);
+
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   if (loading && !refreshing) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh" className="animate-fadeIn">
@@ -161,6 +268,8 @@ export default function UserDashboard() {
       </Box>
     );
   }
+
+  const isOnProfileTab = activeTab === 4;
 
   return (
     <Box
@@ -174,7 +283,12 @@ export default function UserDashboard() {
     >
       <UserDashboardHeader
         title={title}
-        user={user}
+        user={{ 
+          ...(user || {}), 
+          avatarUrl,
+          role: user?.role || "chauffeur",
+          kyc_status: user?.kyc_status || "verified"
+        }} // ✅ Photo dans le bloc "Bonjour" (affichage seulement)
         theme={theme}
         isMobile={isMobile}
         isHeaderExpanded={isHeaderExpanded}
@@ -185,9 +299,10 @@ export default function UserDashboard() {
         onRefresh={() => loadData(true)}
         notifications={notifications}
         onGoSettings={() => navigate("/settings")}
-        onGoProfile={() => setActiveTab(4)} // Active l'onglet Profil (index 4)
+        onGoProfile={handleGoProfile}
         ordersCount={orders.length}
         onOpenMobileMenu={() => setMobileMenuOpen(true)}
+        // ✅ Pas de onUploadPhoto - la photo ne se modifie pas depuis le header
       />
 
       <Box
@@ -221,17 +336,100 @@ export default function UserDashboard() {
           </Alert>
         )}
 
-        <UserDashboardContent
-          activeTab={activeTab}
-          orders={orders}
-          wallet={wallet}
-          activities={activities}
-          notifications={notifications}
-          onOpenQr={() => setQrScannerOpen(true)}
-          onOpenDelete={() => setDeleteDialogOpen(true)}
-          onNavigate={(path) => navigate(path)}
-          isMobile={isMobile}
-        />
+        {/* ✅ Bloc de mode édition */}
+        {isOnProfileTab && (
+          <Paper
+            elevation={0}
+            sx={{
+              mb: 2,
+              p: { xs: 2, md: 2.5 },
+              borderRadius: 3,
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.12)}`,
+              background: isProfileEditMode
+                ? "linear-gradient(135deg, rgba(39,177,228,0.10) 0%, rgba(11,86,140,0.06) 100%)"
+                : "linear-gradient(135deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.01) 100%)",
+            }}
+            className="animate-fadeIn"
+          >
+            <Box
+              sx={{
+                display: "flex",
+                gap: 2,
+                alignItems: { xs: "flex-start", md: "center" },
+                justifyContent: "space-between",
+                flexDirection: { xs: "column", md: "row" },
+                marginTop: 12,
+              }}
+            >
+              <Box sx={{ minWidth: 0 }}>
+                <Typography sx={{ fontWeight: 900, fontSize: 16 }}>
+                  {isProfileEditMode ? "Mode édition activé" : "Mode lecture"}
+                </Typography>
+                <Typography sx={{ mt: 0.5, fontSize: 13, color: "text.secondary" }}>
+                  {isProfileEditMode
+                    ? "Vous pouvez modifier vos informations et votre photo dans la section Profil. Un seul bouton 'Enregistrer' pour sauvegarder toutes vos modifications."
+                    : "Activez l'édition pour mettre à jour votre profil et vos documents."}
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: "flex", gap: 1.2, flexWrap: "wrap" }}>
+                <Button
+                  variant={isProfileEditMode ? "contained" : "outlined"}
+                  onClick={toggleProfileEditMode}
+                  sx={{
+                    borderRadius: 999,
+                    px: 2,
+                    fontWeight: 800,
+                    textTransform: "none",
+                    background: isProfileEditMode
+                      ? "linear-gradient(135deg, #0B568C 0%, #27B1E4 100%)"
+                      : undefined,
+                  }}
+                >
+                  {isProfileEditMode ? "Désactiver l'édition" : "Activer l'édition"}
+                </Button>
+
+                <Button
+                  variant="text"
+                  onClick={() => {
+                    setIsProfileEditMode(false);
+                    setActiveTab(0);
+                    contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  sx={{ borderRadius: 999, px: 1.5, fontWeight: 800, textTransform: "none" }}
+                >
+                  Quitter le profil
+                </Button>
+              </Box>
+            </Box>
+          </Paper>
+        )}
+
+        {activeTab === 4 ? (
+          <UserProfile
+            isInDashboard={true}
+            externalEditMode={isProfileEditMode}
+            onEditModeChange={setIsProfileEditMode}
+            onRequestToggleEditMode={toggleProfileEditMode}
+            onAvatarUpdated={handleAvatarUpdated}
+          />
+        ) : (
+          <UserDashboardContent
+            activeTab={activeTab}
+            orders={orders}
+            wallet={wallet}
+            activities={activities}
+            notifications={notifications}
+            onOpenQr={() => setQrScannerOpen(true)}
+            onOpenDelete={() => setDeleteDialogOpen(true)}
+            onNavigate={(path) => navigate(path)}
+            isMobile={isMobile}
+          />
+        )}
+
+        <Box sx={{ mt: 6, pt: 4, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+          <Footer />
+        </Box>
       </Box>
 
       <MobileNavigationMenu
@@ -276,9 +474,24 @@ export default function UserDashboard() {
         onCloseQr={() => setQrScannerOpen(false)}
         deleteDialogOpen={deleteDialogOpen}
         onCloseDelete={() => setDeleteDialogOpen(false)}
-        onConfirmDelete={handleDeleteAccount}
+        onConfirmDelete={() => handleDeleteAccount()}
       />
+
+      {/* ✅ Snackbar pour notifications générales */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <MuiAlert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
     </Box>
   );
-  <Footer/>
 }

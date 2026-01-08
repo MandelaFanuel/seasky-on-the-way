@@ -1,5 +1,5 @@
 // ========================= src/pages/dashboard/components/UserDashboardHeader.tsx =========================
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Box,
   Paper,
@@ -13,7 +13,6 @@ import {
   Tooltip,
   Button,
   Avatar,
-  Divider,
   alpha,
 } from "@mui/material";
 import {
@@ -51,9 +50,52 @@ type HeaderProps = {
   ordersCount: number;
 
   onGoSettings: () => void;
-  onGoProfile: () => void;  // Active l'onglet Profil (index 4)
+  onGoProfile: () => void;
   onOpenMobileMenu?: () => void;
 };
+
+function getInitials(name?: string) {
+  const n = String(name || "").trim();
+  if (!n) return "U";
+  const parts = n.split(/\s+/).filter(Boolean);
+  const a = parts[0]?.[0] || "U";
+  const b = parts.length > 1 ? parts[1]?.[0] : "";
+  return (a + b).toUpperCase();
+}
+
+function toStr(v: any, fallback = ""): string {
+  if (v === undefined || v === null) return fallback;
+  return String(v);
+}
+
+function toAbsoluteMediaUrl(maybeUrl?: string | null): string | undefined {
+  const v = (maybeUrl || "").trim();
+  if (!v) return undefined;
+  if (v.startsWith("http://") || v.startsWith("https://") || v.startsWith("blob:")) return v;
+
+  const apiBase =
+    (import.meta as any)?.env?.VITE_API_BASE_URL ||
+    (import.meta as any)?.env?.VITE_API_URL ||
+    "http://localhost:8000/api/v1";
+
+  const baseUrl = String(apiBase).replace(/\/+$/, "").replace("/api/v1", "");
+  return `${baseUrl}${v.startsWith("/") ? "" : "/"}${v}`;
+}
+
+function pickProfilePhotoUrl(u: any): string | undefined {
+  const raw =
+    toStr(u?.avatarUrl) ||
+    toStr(u?.photo_url) ||
+    toStr(u?.photo) ||
+    toStr(u?.profile_picture_url) ||
+    toStr(u?.profile_picture) ||
+    toStr(u?.profile_photo_url) ||
+    toStr(u?.avatar_url) ||
+    toStr(u?.image_url) ||
+    "";
+
+  return raw ? toAbsoluteMediaUrl(raw) : undefined;
+}
 
 export default function UserDashboardHeader({
   title,
@@ -72,6 +114,10 @@ export default function UserDashboardHeader({
   onGoProfile,
   onOpenMobileMenu,
 }: HeaderProps) {
+  const avatarSrc = useMemo(() => pickProfilePhotoUrl(user), [user]);
+  const displayName = useMemo(() => user?.full_name || user?.username || "Utilisateur", [user]);
+  const unreadCount = useMemo(() => (notifications || []).filter((n) => !n?.read).length, [notifications]);
+
   return (
     <Box
       sx={{
@@ -110,6 +156,7 @@ export default function UserDashboardHeader({
               flexWrap: "wrap",
             }}
           >
+            {/* ✅ Title Zone avec Avatar dans le bloc "Bonjour" */}
             <Stack direction="row" alignItems="center" spacing={2}>
               {isMobile && onOpenMobileMenu && (
                 <IconButton
@@ -124,35 +171,38 @@ export default function UserDashboardHeader({
                 </IconButton>
               )}
 
-              <Box
-                sx={{
-                  width: isHeaderExpanded ? (isMobile ? 44 : 56) : (isMobile ? 36 : 48),
-                  height: isHeaderExpanded ? (isMobile ? 44 : 56) : (isMobile ? 36 : 48),
-                  borderRadius: isHeaderExpanded ? (isMobile ? 2 : 3) : (isMobile ? 1 : 2),
-                  backgroundColor: alpha(theme.palette.primary.main, isHeaderExpanded ? 0.1 : 0.08),
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "all 0.3s ease",
-                }}
-                className={isHeaderExpanded ? "animate-scaleIn" : ""}
-              >
-                <DashboardIcon
+              {/* ✅ Avatar positionné à gauche du titre "Bonjour" - AFFICHAGE SEULEMENT */}
+              <Tooltip title="Voir mon profil">
+                <Avatar
+                  src={avatarSrc}
+                  onClick={onGoProfile}
                   sx={{
-                    fontSize: isHeaderExpanded ? (isMobile ? 24 : 32) : (isMobile ? 20 : 26),
-                    color: theme.palette.primary.main,
+                    width: isHeaderExpanded ? (isMobile ? 44 : 52) : isMobile ? 36 : 44,
+                    height: isHeaderExpanded ? (isMobile ? 44 : 52) : isMobile ? 36 : 44,
+                    borderRadius: "999px",
+                    cursor: "pointer",
+                    border: `2px solid ${alpha(theme.palette.primary.main, 0.25)}`,
+                    bgcolor: alpha(theme.palette.primary.main, 0.12),
+                    boxShadow: "0 10px 26px rgba(0,0,0,0.12)",
                     transition: "all 0.3s ease",
+                    "&:hover": {
+                      transform: "scale(1.05)",
+                      boxShadow: "0 14px 32px rgba(0,0,0,0.18)",
+                    },
                   }}
-                />
-              </Box>
+                >
+                  {getInitials(displayName)}
+                </Avatar>
+              </Tooltip>
 
+              {/* ✅ Titre et sous-titre */}
               <Box className={isHeaderExpanded ? "animate-fadeInUp" : ""}>
                 <Typography
-                  variant={isHeaderExpanded ? (isMobile ? "h5" : "h4") : (isMobile ? "h6" : "h5")}
+                  variant={isHeaderExpanded ? (isMobile ? "h5" : "h4") : isMobile ? "h6" : "h5"}
                   fontWeight={800}
                   sx={{
                     color: theme.palette.primary.dark,
-                    mb: isHeaderExpanded ? (isMobile ? 0.25 : 0.5) : (isMobile ? 0 : 0.25),
+                    mb: isHeaderExpanded ? (isMobile ? 0.25 : 0.5) : isMobile ? 0 : 0.25,
                     transition: "all 0.3s ease",
                     fontSize: isMobile ? (isHeaderExpanded ? "1.25rem" : "1.1rem") : undefined,
                   }}
@@ -176,11 +226,12 @@ export default function UserDashboardHeader({
               </Box>
             </Stack>
 
+            {/* ✅ Right Actions */}
             <Box display="flex" gap={1.5} flexWrap="wrap" className="animate-fadeInRight">
               {!isMobile && (
                 <Tooltip title="Notifications">
                   <IconButton>
-                    <Badge badgeContent={notifications.filter((n) => !n.read).length} color="error">
+                    <Badge badgeContent={unreadCount} color="error">
                       <Notifications />
                     </Badge>
                   </IconButton>
@@ -223,6 +274,7 @@ export default function UserDashboardHeader({
             </Box>
           </Box>
 
+          {/* ✅ Summary card avec Avatar + Name (Bloc "Kismart John") */}
           {isHeaderExpanded && (!isMobile || activeTab === 0) && (
             <Paper
               sx={{
@@ -245,20 +297,25 @@ export default function UserDashboardHeader({
                 }}
               >
                 <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                  {/* ✅ Avatar dans le bloc summary - AFFICHAGE SEULEMENT */}
                   <Avatar
                     sx={{
                       width: isMobile ? 40 : 48,
                       height: isMobile ? 40 : 48,
                       animation: isMobile ? "bounce-soft 2s ease-in-out infinite" : "none",
+                      cursor: "pointer",
+                      border: `2px solid ${alpha(theme.palette.primary.main, 0.22)}`,
+                      bgcolor: alpha(theme.palette.primary.main, 0.12),
                     }}
-                    src={user?.photo_url}
+                    src={avatarSrc}
+                    onClick={onGoProfile}
                   >
-                    {user?.full_name?.[0] || "U"}
+                    {getInitials(displayName)}
                   </Avatar>
 
                   <Box>
                     <Typography variant={isMobile ? "body1" : "subtitle1"} fontWeight={700}>
-                      {user?.full_name || user?.username}
+                      {displayName}
                     </Typography>
 
                     <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mt: 0.5 }}>
@@ -291,7 +348,7 @@ export default function UserDashboardHeader({
                   <Button
                     variant="contained"
                     startIcon={<Edit />}
-                    onClick={onGoProfile}  // Active l'onglet Profil (index 4)
+                    onClick={onGoProfile}
                     sx={{
                       borderRadius: "50px",
                       textTransform: "none",
@@ -312,6 +369,7 @@ export default function UserDashboardHeader({
             </Paper>
           )}
 
+          {/* ✅ Tabs */}
           <Box sx={{ mt: 2 }} className="animate-fadeIn">
             <Tabs
               value={activeTab}
@@ -337,16 +395,14 @@ export default function UserDashboardHeader({
                 label={isMobile ? "Tableau" : "Tableau de bord"}
                 className={activeTab === 0 ? "animate-bounce-soft" : ""}
               />
-              <Tab
-                icon={isMobile ? <AccountBalanceWallet /> : undefined}
-                label={isMobile ? "Portefeuille" : "Portefeuille"}
-              />
+              <Tab icon={isMobile ? <AccountBalanceWallet /> : undefined} label={isMobile ? "Portefeuille" : "Portefeuille"} />
               <Tab icon={isMobile ? <LocalShipping /> : undefined} label={isMobile ? "Commandes" : "Commandes"} />
               <Tab icon={isMobile ? <Store /> : undefined} label={isMobile ? "Points" : "Points de vente"} />
               <Tab icon={isMobile ? <Person /> : undefined} label="Profil" />
             </Tabs>
           </Box>
 
+          {/* ✅ Extra chips */}
           {isHeaderExpanded && !isMobile && (
             <Stack direction="row" spacing={1.5} sx={{ flexWrap: "wrap", gap: 1.5, mt: 2 }} className="animate-fadeInUp">
               <Chip

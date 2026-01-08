@@ -12,12 +12,13 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
     DJANGO_SETTINGS_MODULE=seasky.settings
 
-RUN apt-get update && apt-get upgrade -y && \
+# ✅ IMPORTANT: pas de "apt-get upgrade -y" (évite OOM/exit 137 sur Render)
+# ✅ IMPORTANT: pas de python3-dev (inutile avec python:3.12-slim, et très lourd)
+RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       curl \
       ca-certificates \
       build-essential \
-      python3-dev \
       libpq-dev \
       postgresql-client \
       netcat-traditional \
@@ -25,7 +26,6 @@ RUN apt-get update && apt-get upgrade -y && \
       nano \
       vim-tiny \
       less \
-    && apt-get autoremove -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 

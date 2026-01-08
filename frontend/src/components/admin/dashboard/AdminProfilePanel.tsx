@@ -26,6 +26,8 @@ import {
   CircularProgress,
   TextField,
   MenuItem,
+  IconButton,
+  Badge,
 } from "@mui/material";
 
 import {
@@ -42,6 +44,8 @@ import {
   CalendarMonth as CalendarIcon,
   Public as PublicIcon,
   Wc as GenderIcon,
+  PhotoCamera as PhotoCameraIcon,
+  Delete as DeleteIcon,
 } from "@mui/icons-material";
 
 export type AdminProfilePanelHandle = {
@@ -62,6 +66,7 @@ type AdminUser = {
   id?: number;
   username?: string;
   email?: string;
+  photo?: string; // Note: backend utilise "photo", pas "profile_picture"
 
   // rôle / flags
   role?: string;
@@ -119,6 +124,20 @@ function toFrDateTime(input?: string) {
   }
 }
 
+// Fonction pour obtenir l'URL complète de la photo de profil
+const getPhotoUrl = (photo?: string): string | null => {
+  if (!photo) return null;
+  
+  // Si c'est déjà une URL complète
+  if (photo.startsWith('http://') || photo.startsWith('https://')) {
+    return photo;
+  }
+  
+  // Si c'est un chemin relatif, ajouter la base URL
+  const baseUrl = getApiBase().replace('/api/v1', '');
+  return `${baseUrl}${photo.startsWith('/') ? '' : '/'}${photo}`;
+};
+
 const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function AdminProfilePanel(
   { onLoadingChange },
   ref
@@ -145,6 +164,9 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
     nationality: "",
   });
 
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
   const [snack, setSnack] = useState<Snack>({
     open: false,
     msg: "",
@@ -164,11 +186,29 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
     };
   }, []);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const api = useMemo(() => {
     const instance = axios.create({
       baseURL: getApiBase(),
       headers: { "Content-Type": "application/json" },
       timeout: 15000,
+    });
+
+    instance.interceptors.request.use((config: any) => {
+      const token = getAccessToken();
+      if (token) config.headers.Authorization = `Bearer ${token}`;
+      return config;
+    });
+
+    return instance;
+  }, []);
+
+  const apiMultipart = useMemo(() => {
+    const instance = axios.create({
+      baseURL: getApiBase(),
+      headers: { "Content-Type": "multipart/form-data" },
+      timeout: 20000,
     });
 
     instance.interceptors.request.use((config: any) => {
@@ -223,6 +263,14 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
 
   const initials = useMemo(() => safeInitials(admin?.full_name || admin?.username), [admin]);
 
+  const photoUrl = useMemo(() => {
+    if (photoPreview) return photoPreview;
+    if (admin?.photo) {
+      return getPhotoUrl(admin.photo);
+    }
+    return null;
+  }, [admin?.photo, photoPreview]);
+
   const fillFormFromAdmin = useCallback((u: AdminUser) => {
     setForm({
       full_name: u.full_name || "",
@@ -247,6 +295,10 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
 
       setAdmin(data);
       fillFormFromAdmin(data);
+      
+      // Réinitialiser la prévisualisation photo
+      setPhotoFile(null);
+      setPhotoPreview(null);
     } catch (e: any) {
       if (!mountedRef.current) return;
       const msg =
@@ -309,6 +361,8 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
   const handleCancelEdit = () => {
     if (admin) fillFormFromAdmin(admin);
     setEditMode(false);
+    setPhotoFile(null);
+    setPhotoPreview(null);
   };
 
   const validateForm = () => {
@@ -326,6 +380,42 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
     return true;
   };
 
+  const handlePhotoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validation du type de fichier
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      showSnack("Format de fichier non supporté. Utilisez JPEG, PNG, GIF ou WebP.", "error");
+      return;
+    }
+
+    // Validation de la taille (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      showSnack("La taille de l'image ne doit pas dépasser 5MB.", "error");
+      return;
+    }
+
+    setPhotoFile(file);
+    
+    // Créer une prévisualisation
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPhotoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSave = async () => {
     if (!validateForm()) return;
 
@@ -333,25 +423,41 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
     onLoadingRef.current?.(true);
 
     try {
-      const payload: any = {
-        full_name: form.full_name.trim(),
-        phone: form.phone.trim(),
-        gender: form.gender.trim(),
-        date_of_birth: form.date_of_birth.trim(),
-        nationality: form.nationality.trim(),
-      };
+      const formData = new FormData();
 
-      if (isAdmin && profileCompletePreview) {
-        payload.kyc_status = "verified";
+      // Ajouter la photo si une nouvelle a été sélectionnée
+      if (photoFile) {
+        formData.append('photo', photoFile);
       }
 
-      const res = await api.patch("/me/update_profile/", payload);
+      // Ajouter les autres informations du profil
+      formData.append('full_name', form.full_name.trim());
+      formData.append('phone', form.phone.trim());
+      formData.append('gender', form.gender.trim());
+      formData.append('date_of_birth', form.date_of_birth.trim());
+      formData.append('nationality', form.nationality.trim());
+
+      if (isAdmin && profileCompletePreview) {
+        formData.append('kyc_status', 'verified');
+      }
+
+      // Utiliser PATCH avec FormData
+      const res = await apiMultipart.patch("/me/update_profile/", formData);
       const updated = (res?.data || {}) as AdminUser;
 
       if (!mountedRef.current) return;
 
-      setAdmin((p) => ({ ...(p || {}), ...updated, ...payload }));
+      setAdmin((p) => ({ 
+        ...(p || {}), 
+        ...updated,
+        ...form,
+        photo: updated.photo || p?.photo
+      }));
+      
       setEditMode(false);
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      
       showSnack("Profil mis à jour avec succès", "success");
     } catch (e: any) {
       const msg =
@@ -392,6 +498,12 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
     return { bg: alpha("#27B1E4", 0.12), fg: "#0B568C" };
   }, [admin, isAdmin, profileComplete]);
 
+  const triggerFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -430,20 +542,42 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
       >
         <Box display="flex" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={2}>
           <Stack direction="row" spacing={2} alignItems="center">
-            <Avatar
-              sx={{
-                width: 72,
-                height: 72,
-                bgcolor: "white",
-                color: "#0B568C",
-                border: "2px solid rgba(11,86,140,0.15)",
-                boxShadow: "0 12px 30px rgba(11, 86, 140, 0.15)",
-                fontWeight: 900,
-                fontSize: "1.6rem",
-              }}
+            <Badge
+              overlap="circular"
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              badgeContent={
+                editMode ? (
+                  <IconButton
+                    onClick={triggerFileInput}
+                    sx={{
+                      backgroundColor: "#0B568C",
+                      color: "white",
+                      width: 36,
+                      height: 36,
+                      '&:hover': { backgroundColor: "#0A345F" }
+                    }}
+                  >
+                    <PhotoCameraIcon fontSize="small" />
+                  </IconButton>
+                ) : null
+              }
             >
-              {initials}
-            </Avatar>
+              <Avatar
+                src={photoUrl || undefined}
+                sx={{
+                  width: 72,
+                  height: 72,
+                  bgcolor: photoUrl ? "transparent" : "white",
+                  color: "#0B568C",
+                  border: "2px solid rgba(11,86,140,0.15)",
+                  boxShadow: "0 12px 30px rgba(11, 86, 140, 0.15)",
+                  fontWeight: 900,
+                  fontSize: "1.6rem",
+                }}
+              >
+                {photoUrl ? '' : initials}
+              </Avatar>
+            </Badge>
 
             <Box>
               <Typography sx={{ fontWeight: 900, color: "#1A4F75", fontSize: "1.25rem" }}>
@@ -553,6 +687,15 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
           </Alert>
         )}
 
+        {/* Input fichier caché pour la photo */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          style={{ display: 'none' }}
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          onChange={handlePhotoSelect}
+        />
+
         <Box
           sx={{
             display: "grid",
@@ -566,6 +709,60 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
             </Typography>
 
             <Stack spacing={2}>
+              {/* Section Photo de profil en mode édition */}
+              {editMode && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle2" sx={{ color: "#335F7A", fontWeight: 700, mb: 1 }}>
+                    Photo de profil
+                  </Typography>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Avatar
+                      src={photoPreview || getPhotoUrl(admin?.photo) || undefined}
+                      sx={{ width: 64, height: 64 }}
+                    >
+                      {initials}
+                    </Avatar>
+                    <Stack spacing={1}>
+                      <Button
+                        variant="outlined"
+                        startIcon={<PhotoCameraIcon />}
+                        onClick={triggerFileInput}
+                        size="small"
+                        sx={{
+                          borderRadius: "50px",
+                          textTransform: "none",
+                          fontWeight: 600,
+                          borderWidth: 2,
+                          borderColor: "#0B568C",
+                          color: "#0B568C",
+                        }}
+                      >
+                        Changer la photo
+                      </Button>
+                      {(photoFile || admin?.photo) && (
+                        <Button
+                          variant="text"
+                          startIcon={<DeleteIcon />}
+                          onClick={handleRemovePhoto}
+                          size="small"
+                          sx={{
+                            borderRadius: "50px",
+                            textTransform: "none",
+                            fontWeight: 600,
+                            color: "#F44336",
+                          }}
+                        >
+                          Supprimer la photo
+                        </Button>
+                      )}
+                    </Stack>
+                  </Stack>
+                  <Typography variant="caption" sx={{ color: "#487F9A", display: "block", mt: 1 }}>
+                    Formats supportés: JPEG, PNG, GIF, WebP. Taille max: 5MB.
+                  </Typography>
+                </Box>
+              )}
+
               <TextField
                 label="Nom complet **"
                 value={editMode ? form.full_name : admin?.full_name || ""}

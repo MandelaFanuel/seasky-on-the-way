@@ -1,30 +1,6 @@
 // ========================= src/services/adminApi.ts =========================
 import axios, { type InternalAxiosRequestConfig } from "axios";
 
-function isBrowser() {
-  return typeof window !== "undefined";
-}
-
-function normalizeBaseUrl(input?: string) {
-  let url = (input ?? "").trim();
-
-  // ✅ Default
-  if (!url) {
-    const host = isBrowser() ? window.location.hostname || "localhost" : "localhost";
-    url = `http://${host}:8000`;
-  }
-
-  // allow protocol-less like "backend:8000"
-  if (!/^https?:\/\//i.test(url) && /^[a-zA-Z0-9.-]+:\d+/.test(url)) {
-    url = `http://${url}`;
-  }
-
-  return url.replace(/\/+$/, "");
-}
-
-const API_HOST = normalizeBaseUrl((import.meta as any).env?.VITE_API_URL_BASE);
-const API_PREFIX = "/api/v1";
-
 function getAccessToken(): string | null {
   try {
     return (
@@ -55,20 +31,23 @@ function ensureApiV1(url?: string) {
   const u = url.trim();
   if (!u) return u;
 
+  // absolute => untouched
   if (isAbsoluteUrl(u)) return u;
 
   const path = normalizePath(u);
 
-  // Si on vise déjà /api/*, /media/*, /static/* on ne touche pas
+  // If already targets /api/* or /media/static => untouched
   if (path.startsWith("/api/") || path.startsWith("/media/") || path.startsWith("/static/")) {
     return path;
   }
 
-  return normalizePath(`${API_PREFIX}${path}`);
+  // default => /api/v1/...
+  return normalizePath(`/api/v1${path}`);
 }
 
 export const adminApi = axios.create({
-  baseURL: API_HOST,
+  // ✅ same-origin: in DEV it hits http://localhost:5173/... then Vite proxy forwards to backend
+  baseURL: "",
   timeout: 20000,
   headers: { Accept: "application/json" },
 });
@@ -76,18 +55,14 @@ export const adminApi = axios.create({
 adminApi.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = getAccessToken();
-
-    // AxiosHeaders (v1) ou objet simple : on protège les deux cas
     config.headers = config.headers ?? {};
 
-    // FormData: ne pas forcer Content-Type (le browser met le boundary)
+    // Avoid forcing JSON for FormData
     const isFormData =
       typeof FormData !== "undefined" &&
       typeof config.data !== "undefined" &&
       config.data instanceof FormData;
 
-    // Forcer JSON uniquement si pas déjà défini et pas FormData
-    // ⚠️ headers peut être AxiosHeaders => on utilise set si disponible
     const hasSet = typeof (config.headers as any).set === "function";
     const hasGet = typeof (config.headers as any).get === "function";
 

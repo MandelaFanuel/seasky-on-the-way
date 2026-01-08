@@ -12,18 +12,17 @@ ENV NODE_ENV=development \
 
 WORKDIR /app
 
-RUN apk add --no-cache wget
-
 COPY package.json package-lock.json* ./
 
-# ✅ Ne bloque pas l'image si le réseau est lent: install simple
+# ✅ Install deps (no wget, no apk)
 RUN npm install --no-audit --fund=false
 
 COPY . .
 
 EXPOSE 5173
 
+# ✅ Healthcheck sans wget/curl (zéro dépendance réseau apk)
 HEALTHCHECK --interval=30s --timeout=10s --retries=5 --start-period=60s \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:5173 || exit 1
+  CMD node -e "fetch('http://localhost:5173').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]

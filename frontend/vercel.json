@@ -5,13 +5,30 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "routes": [
+    { "handle": "filesystem" },
+
+ 
     {
-      "handle": "filesystem"
+      "src": "/api/v1/(.*)",
+      "dest": "https://seasky-backend.onrender.com/api/v1/$1"
     },
+
     {
       "src": "/api/(.*)",
       "dest": "https://seasky-backend.onrender.com/api/v1/$1"
     },
+
+
+    {
+      "src": "/media/(.*)",
+      "dest": "https://seasky-backend.onrender.com/media/$1"
+    },
+    {
+      "src": "/static/(.*)",
+      "dest": "https://seasky-backend.onrender.com/static/$1"
+    },
+
+
     {
       "src": "/(.*)",
       "dest": "/index.html"

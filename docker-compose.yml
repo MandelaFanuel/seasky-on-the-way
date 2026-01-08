@@ -1,3 +1,4 @@
+# ========================= docker-compose.yml =========================
 services:
   db:
     image: postgres:16-alpine
@@ -81,8 +82,14 @@ services:
     depends_on:
       - backend
     environment:
+      # ✅ (inchangé) utile si certaines pages utilisent axios baseURL côté code
       VITE_API_URL: ${VITE_API_URL:-http://localhost:8000/api/v1}
       VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:8000/ws}
+
+      # ✅ AJOUTÉ ICI (IMPORTANT):
+      # Vite proxy tourne DANS le container => pour joindre Django, il faut "backend"
+      VITE_DEV_PROXY_TARGET: ${VITE_DEV_PROXY_TARGET:-http://backend:8000}
+
     ports:
       - "5173:5173"
     volumes:

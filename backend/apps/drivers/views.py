@@ -1,5 +1,4 @@
-# apps/drivers/views.py
-
+# ========================= apps/drivers/views.py =========================
 """
 Views pour la gestion des chauffeurs.
 """
@@ -32,6 +31,10 @@ from .serializers import (
 from .utils import DriverAnalytics, DriverStatusManager
 
 logger = logging.getLogger(__name__)
+
+
+def _is_admin(user) -> bool:
+    return bool(user and (user.is_superuser or user.is_staff or getattr(user, "role", "") == "admin"))
 
 
 class DriverFilter(filters.FilterSet):
@@ -121,10 +124,7 @@ class DriverViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
 
-        # Le serializer peut générer un mot de passe si absent.
-        # On le récupère AVANT la réponse et on le renvoie UNE SEULE FOIS.
         raw_password = serializer.validated_data.get("password") or request.data.get("password")
-
         driver = serializer.save()
 
         driver_data = DriverSerializer(driver, context={"request": request}).data
@@ -135,7 +135,7 @@ class DriverViewSet(viewsets.ModelViewSet):
             "email": getattr(driver.user, "email", None),
             "role": getattr(driver.user, "role", None),
             "account_type": getattr(driver.user, "account_type", None),
-            "password": raw_password,  # ✅ montré uniquement à l'admin dans cette réponse
+            "password": raw_password,
             "login_hint": "Connexion possible avec username OU téléphone + mot de passe",
         }
 
@@ -501,6 +501,10 @@ class DriverAvailabilityViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def dashboard(self, request):
+        # ✅ Si tu veux admin only pour dashboard, décommente:
+        # if not _is_admin(request.user):
+        #     return Response({"detail": "Accès refusé."}, status=403)
+
         available_drivers = self.queryset.filter(is_available=True).count()
 
         by_transport = (
@@ -531,12 +535,25 @@ class DriverAvailabilityViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"])
     def update_location(self, request):
+        """
+        ✅ Autorisé:
+        - admin
+        - le chauffeur lui-même (user connecté = driver.user)
+        """
         driver_id = request.data.get("driver_id")
         lat = request.data.get("lat")
         lng = request.data.get("lng")
 
         if not driver_id or lat is None or lng is None:
             return Response({"success": False, "message": "driver_id, lat et lng requis"}, status=400)
+
+        try:
+            driver = Driver.objects.select_related("user").get(id=driver_id)
+        except Driver.DoesNotExist:
+            return Response({"success": False, "message": "Chauffeur non trouvé"}, status=404)
+
+        if not (_is_admin(request.user) or getattr(driver, "user_id", None) == request.user.id):
+            return Response({"detail": "Accès refusé."}, status=403)
 
         try:
             availability = DriverAvailability.objects.get(driver_id=driver_id)
@@ -546,7 +563,7 @@ class DriverAvailabilityViewSet(viewsets.ModelViewSet):
             availability.save(update_fields=["location_lat", "location_lng", "last_location_update", "last_updated"])
             return Response({"success": True, "message": "Localisation mise à jour", "data": self.get_serializer(availability).data})
         except DriverAvailability.DoesNotExist:
-            return Response({"success": False, "message": "Chauffeur non trouvé"}, status=404)
+            return Response({"success": False, "message": "Disponibilité introuvable"}, status=404)
 
 
 class DriverPerformanceViewSet(viewsets.ReadOnlyModelViewSet):

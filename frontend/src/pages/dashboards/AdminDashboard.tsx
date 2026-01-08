@@ -98,7 +98,7 @@ export default function AdminDashboard() {
   }, [lastScrollTop]);
 
   const handleOpenCreateFromParent = useCallback(() => {
-    if (activeTab === "users") usersRef.current?.openCreate?.();
+    // ✅ On garde la logique existante, mais "users" ne doit plus ouvrir de création
     if (activeTab === "drivers") driverRef.current?.openCreate();
     if (activeTab === "agents") agentRef.current?.openCreate();
     if (activeTab === "pdv") pdvRef.current?.openCreate();
@@ -125,7 +125,6 @@ export default function AdminDashboard() {
     if (activeTab === "drivers") return "Nouveau Chauffeur";
     if (activeTab === "agents") return "Nouvel Agent";
     if (activeTab === "pdv") return "Nouveau PDV";
-    if (activeTab === "users") return "Nouvel Utilisateur";
     return "Créer";
   }, [activeTab]);
 
@@ -133,12 +132,12 @@ export default function AdminDashboard() {
     if (activeTab === "drivers") return <PersonAddIcon />;
     if (activeTab === "agents") return <SupportAgentIcon />;
     if (activeTab === "pdv") return <StoreIcon />;
-    if (activeTab === "users") return <PeopleIcon />;
     return <PersonAddIcon />;
   }, [activeTab]);
 
+  // ✅ "users" retiré: admin ne peut pas créer des utilisateurs
   const canCreate = useMemo(() => {
-    return activeTab === "drivers" || activeTab === "agents" || activeTab === "pdv" || activeTab === "users";
+    return activeTab === "drivers" || activeTab === "agents" || activeTab === "pdv";
   }, [activeTab]);
 
   const sectionLabel = useMemo(() => {
@@ -399,9 +398,7 @@ export default function AdminDashboard() {
             <RealtimeActivityDashboard ref={realtimeRef} onLoadingChange={(l) => setChildLoading(l)} mode="overview" />
           )}
 
-          {activeTab === "profile" && (
-            <AdminProfilePanel ref={profileRef} onLoadingChange={(l) => setChildLoading(l)} />
-          )}
+          {activeTab === "profile" && <AdminProfilePanel ref={profileRef} onLoadingChange={(l) => setChildLoading(l)} />}
 
           {activeTab === "users" && <AdminUsersList ref={usersRef} onLoadingChange={(l) => setChildLoading(l)} />}
 

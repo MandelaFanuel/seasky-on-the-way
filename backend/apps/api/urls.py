@@ -17,7 +17,7 @@ from apps.accounts.views import (
     MeViewSet,
     UserDocumentViewSet,
     AgentViewSet,
-    AdminUsersViewSet,  # ✅ AJOUT IMPORTANT
+    AdminUsersViewSet,
 )
 from apps.suppliers.views import SupplierViewSet
 from apps.drivers.views import (
@@ -31,7 +31,6 @@ from apps.logistics.views import CollectionViewSet, DeliveryViewSet, AttendanceV
 from apps.qr.views import QRViewSet
 from apps.wallet.views import WalletViewSet
 from apps.adminpanel.views import AdminDashboardViewSet
-
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +83,7 @@ def api_v1_root(request):
                 "login": f"{base_url}/api/v1/auth/login",
                 "logout": f"{base_url}/api/v1/auth/logout",
                 "logout_all": f"{base_url}/api/v1/auth/logout_all",
+                "refresh": f"{base_url}/api/v1/auth/refresh",
             },
             "note": "Ces endpoints acceptent avec OU sans slash final.",
         },
@@ -115,15 +115,11 @@ def api_health_check(request):
 router = DefaultRouter()
 router.trailing_slash = "/?"  # accepte / et sans /
 
-
-# ========================= VIEWSETS =========================
 router.register(r"auth", AuthViewSet, basename="auth")
 router.register(r"me", MeViewSet, basename="me")
 router.register(r"documents", UserDocumentViewSet, basename="documents")
 
-# ✅ Agents (admin-only)
 router.register(r"agents", AgentViewSet, basename="agents")
-
 router.register(r"suppliers", SupplierViewSet, basename="suppliers")
 
 router.register(r"drivers", DriverViewSet, basename="drivers")
@@ -138,16 +134,11 @@ router.register(r"deliveries", DeliveryViewSet, basename="deliveries")
 router.register(r"attendance", AttendanceViewSet, basename="attendance")
 
 router.register(r"qr", QRViewSet, basename="qr")
-
-# ✅ Wallet (garde 1 seul endpoint pour éviter confusion)
 router.register(r"wallet", WalletViewSet, basename="wallet")
-
-# ✅ Admin dashboard endpoints
 router.register(r"admin-dashboard", AdminDashboardViewSet, basename="admin-dashboard")
 
-# ✅ NEW: Admin Users List
+# ✅ Admin Users
 router.register(r"admin/users", AdminUsersViewSet, basename="admin-users")
-
 
 urlpatterns = [
     path("", api_v1_root, name="api-v1-root"),

@@ -1,4 +1,3 @@
-# ========================= apps/accounts/views.py =========================
 import logging
 
 from django.db import transaction
@@ -7,17 +6,17 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth import get_user_model
 
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.pagination import PageNumberPagination
 
 from rest_framework_simplejwt.tokens import RefreshToken
-
-from django.contrib.auth import get_user_model
+from rest_framework_simplejwt.exceptions import TokenError
 
 from .models import UserActivityLog, UserDocument
 from .serializers import (
@@ -29,6 +28,7 @@ from .serializers import (
     RegisterSerializer,
     UserSerializer,
     AgentCreateSerializer,
+    AdminUserWriteSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -56,9 +56,6 @@ def is_admin_user(user) -> bool:
 
 
 def _get_user_with_documents(user_id: int):
-    """
-    ✅ Helper: récupère un user frais depuis DB + documents (si relation existe).
-    """
     try:
         qs = User.objects.filter(pk=user_id)
         try:
@@ -70,6 +67,11 @@ def _get_user_with_documents(user_id: int):
         return None
 
 
+class IsAdminOrStaff(BasePermission):
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and is_admin_user(request.user))
+
+
 # ========================= Pagination =========================
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 10
@@ -79,10 +81,6 @@ class StandardResultsSetPagination(PageNumberPagination):
 
 # ========================= Me =========================
 class MeViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
-    """
-    Endpoints personnels de l'utilisateur connecté.
-    Base: /api/v1/me/
-    """
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
@@ -111,12 +109,6 @@ class MeViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.Gen
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        # ✅ NOTE:
-        # Tu m'as dit que côté views c'est déjà bien ajusté.
-        # Ici je laisse "auto-verified admin" tel que tu l'as donné.
-        # Si tu veux STRICTEMENT "verified seulement si profil complet",
-        # c'est mieux de le faire dans serializer (validation des champs requis)
-        # ou de vérifier ces champs ici.
         try:
             if is_admin_user(user):
                 if getattr(user, "kyc_status", None) != "verified":
@@ -155,16 +147,15 @@ class MeViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.Gen
         )
 
         return Response(
-            {"message": _("Mot de passe changé avec succès"), "user": UserDetailSerializer(user, context={"request": request}).data},
+            {
+                "message": _("Mot de passe changé avec succès"),
+                "user": UserDetailSerializer(user, context={"request": request}).data,
+            },
             status=status.HTTP_200_OK,
         )
 
     @action(detail=False, methods=["get"])
     def activity(self, request):
-        """
-        GET /api/v1/me/activity
-        Renvoie uniquement l'historique de l'utilisateur connecté.
-        """
         qs = UserActivityLog.objects.filter(user=request.user).order_by("-created_at")[:200]
         data = [
             {
@@ -182,10 +173,6 @@ class MeViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.Gen
 
 # ========================= Auth (JWT) =========================
 class AuthViewSet(viewsets.GenericViewSet):
-    """
-    Auth endpoints (JWT)
-    Base: /api/v1/auth/
-    """
     permission_classes = [AllowAny]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
@@ -206,14 +193,6 @@ class AuthViewSet(viewsets.GenericViewSet):
 
         with transaction.atomic():
             user = serializer.save()
-
-            logger.info(
-                "[Auth] User created: id=%s username=%s account_type=%s supplier_type=%s",
-                user.id,
-                user.username,
-                getattr(user, "account_type", None),
-                getattr(user, "supplier_type", None),
-            )
 
             UserActivityLog.objects.create(
                 user=user,
@@ -296,6 +275,25 @@ class AuthViewSet(viewsets.GenericViewSet):
             status=status.HTTP_200_OK,
         )
 
+    @method_decorator(csrf_exempt)
+    @action(detail=False, methods=["post"], permission_classes=[AllowAny], authentication_classes=[])
+    def refresh(self, request):
+        refresh_token = request.data.get("refresh") or request.data.get("refresh_token")
+        if not refresh_token:
+            return Response({"detail": "refresh token requis"}, status=400)
+
+        try:
+            refresh = RefreshToken(refresh_token)
+            access = str(refresh.access_token)
+            return Response(
+                {"success": True, "access": access, "tokens": {"access": access, "refresh": str(refresh)}},
+                status=200,
+            )
+        except TokenError:
+            return Response({"detail": "refresh token invalide ou expiré"}, status=401)
+        except Exception:
+            return Response({"detail": "Impossible de rafraîchir le token"}, status=400)
+
     @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated])
     def logout(self, request):
         refresh_token = request.data.get("refresh") or request.data.get("refresh_token")
@@ -329,10 +327,6 @@ class AuthViewSet(viewsets.GenericViewSet):
 
 # ========================= Documents (KYC) =========================
 class UserDocumentViewSet(viewsets.ModelViewSet):
-    """
-    Documents utilisateur (KYC).
-    Base: /api/v1/documents/
-    """
     permission_classes = [IsAuthenticated]
     serializer_class = UserDocumentSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -413,18 +407,12 @@ class UserDocumentViewSet(viewsets.ModelViewSet):
         else:
             required_ok = False
 
-        # ⚠️ Ici: si tu veux "verified seulement par admin" => ne pas mettre verified automatiquement.
-        # Mais tu m'as dit que views déjà ajusté. Je laisse ta logique.
         user.kyc_status = "verified" if required_ok else "pending"
         user.save(update_fields=["kyc_status"])
 
 
 # ========================= Admin: Agents =========================
 class AgentViewSet(viewsets.ModelViewSet):
-    """
-    Admin dashboard: gérer les agents.
-    Base: /api/v1/agents/
-    """
     permission_classes = [IsAuthenticated]
     queryset = User.objects.all().order_by("-created_at")
 
@@ -495,25 +483,30 @@ class AgentViewSet(viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
 
 
-# ========================= ✅ Admin Users List + KYC/KYB Actions =========================
-class AdminUsersViewSet(viewsets.ReadOnlyModelViewSet):
+# ========================= ✅ Admin Users (LIST + DOCS + VERIFY + CRUD) =========================
+
+class AdminUsersViewSet(viewsets.ModelViewSet):
     """
-    Admin: liste tous les utilisateurs (SAUF admins) + actions KYC/KYB.
-    Base: /api/v1/admin/users/
+    Endpoints attendus par ton frontend:
+    - GET    /admin/users/
+    - GET    /admin/users/<id>/
+    - POST   /admin/users/
+    - PATCH  /admin/users/<id>/
+    - DELETE /admin/users/<id>/
+    - GET    /admin/users/<id>/documents/
+    - POST   /admin/users/<id>/verify_kyc/
     """
-    permission_classes = [IsAuthenticated]
-    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated, IsAdminOrStaff]
     pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
-        if not is_admin_user(self.request.user):
-            return User.objects.none()
+        # ✅ Base queryset
+        qs = User.objects.all().order_by("-created_at", "-id")
 
-        qs = User.objects.all().order_by("-created_at")
-
-        # ✅ IMPORTANT: ne pas afficher les admins dans la liste
+        # ✅ Exclure admins/staff/superuser de la liste
         qs = qs.exclude(Q(is_superuser=True) | Q(is_staff=True) | Q(role__iexact="admin"))
 
+        # ✅ Search
         search = (self.request.query_params.get("search") or "").strip()
         if search:
             qs = qs.filter(
@@ -525,81 +518,121 @@ class AdminUsersViewSet(viewsets.ReadOnlyModelViewSet):
                 | Q(account_type__icontains=search)
             )
 
+        # ✅ Status filter (frontend: all|active|inactive)
         status_param = (self.request.query_params.get("status") or "all").strip().lower()
 
         inactive_q = (
             Q(is_active=False)
-            | Q(account_status__icontains="block")
             | Q(account_status__icontains="suspend")
-            | Q(account_status__icontains="disable")
+            | Q(account_status__icontains="deactivated")
             | Q(account_status__icontains="inactive")
+            | Q(account_status__icontains="block")
+            | Q(account_status__icontains="disable")
         )
 
         if status_param == "active":
-            qs = qs.filter(is_active=True).exclude(
-                Q(account_status__icontains="block")
-                | Q(account_status__icontains="suspend")
-                | Q(account_status__icontains="disable")
-                | Q(account_status__icontains="inactive")
-            )
+            qs = qs.filter(is_active=True).exclude(inactive_q)
         elif status_param == "inactive":
             qs = qs.filter(inactive_q)
 
         return qs
 
+    def get_serializer_class(self):
+        # ✅ GET => UserSerializer, WRITE => AdminUserWriteSerializer
+        if self.action in ("create", "update", "partial_update"):
+            return AdminUserWriteSerializer
+        return UserSerializer
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx["request"] = self.request
+        return ctx
+
+    # ✅ IMPORTANT: rendre la liste ultra stable + logs (évite 500 silencieux)
     def list(self, request, *args, **kwargs):
-        if not is_admin_user(request.user):
-            return Response({"detail": "Accès refusé."}, status=403)
-        return super().list(request, *args, **kwargs)
+        try:
+            qs = self.filter_queryset(self.get_queryset())
+            page = self.paginate_queryset(qs)
+            if page is not None:
+                data = self.get_serializer(page, many=True).data
+                return self.get_paginated_response(data)
+
+            data = self.get_serializer(qs, many=True).data
+            return Response({"count": len(data), "results": data}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            logger.exception("AdminUsersViewSet.list error: %s", e)
+            # ✅ En DEBUG, tu verras le traceback en logs; côté client on renvoie clean.
+            return Response(
+                {"detail": "Erreur serveur lors du chargement des utilisateurs."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            return super().retrieve(request, *args, **kwargs)
+        except Exception as e:
+            logger.exception("AdminUsersViewSet.retrieve error: %s", e)
+            return Response({"detail": "Erreur serveur."}, status=500)
 
     @action(detail=True, methods=["get"])
     def documents(self, request, pk=None):
         """
-        ✅ Voir documents KYC/KYB de l'utilisateur
-        GET /api/v1/admin/users/{id}/documents/
+        GET /admin/users/<id>/documents/
+        Retourne {"count": n, "results": [...]}
         """
-        if not is_admin_user(request.user):
-            return Response({"detail": "Accès refusé."}, status=403)
-
-        user = User.objects.filter(pk=pk).first()
-        if not user:
-            return Response({"detail": "Utilisateur introuvable."}, status=404)
-
-        docs = UserDocument.objects.filter(user=user).order_by("-uploaded_at")
-        data = UserDocumentSerializer(docs, many=True, context={"request": request}).data
-        return Response({"user_id": user.id, "count": len(data), "results": data}, status=200)
+        try:
+            user = self.get_object()
+            qs = UserDocument.objects.filter(user=user).order_by("-uploaded_at")
+            data = UserDocumentSerializer(qs, many=True, context={"request": request}).data
+            return Response({"count": len(data), "results": data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.exception("AdminUsersViewSet.documents error: %s", e)
+            return Response({"detail": "Impossible de charger les documents."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=["post"])
     def verify_kyc(self, request, pk=None):
         """
-        ✅ Valider KYC/KYB (admin only)
-        POST /api/v1/admin/users/{id}/verify_kyc/
+        POST /admin/users/<id>/verify_kyc/
         """
-        if not is_admin_user(request.user):
-            return Response({"detail": "Accès refusé."}, status=403)
-
-        user = User.objects.filter(pk=pk).first()
-        if not user:
-            return Response({"detail": "Utilisateur introuvable."}, status=404)
-
-        # sécurité: ne jamais valider un admin via cette route (au cas où)
-        if is_admin_user(user):
-            return Response({"detail": "Action interdite sur un compte admin."}, status=400)
-
         try:
+            user = self.get_object()
+
             user.kyc_status = "verified"
-            user.save(update_fields=["kyc_status"])
+            user.kyc_verified_at = timezone.now()
+
+            # ✅ Optionnel: si pending_kyc -> active
+            if getattr(user, "account_status", "") == "pending_kyc":
+                user.account_status = "active"
+
+            # ✅ updated_at est auto_now, mais update_fields peut l’inclure sans casser
+            user.save(update_fields=["kyc_status", "kyc_verified_at", "account_status", "updated_at"])
+
+            UserActivityLog.objects.create(
+                user=request.user,
+                action="admin_kyc_verified",
+                details={"target_user_id": user.id, "target_username": user.username},
+                ip_address=_client_ip(request),
+                user_agent=_user_agent(request),
+            )
+
+            return Response(
+                {"success": True, "message": "KYC validé", "user": UserSerializer(user, context={"request": request}).data},
+                status=status.HTTP_200_OK,
+            )
         except Exception as e:
-            logger.exception("verify_kyc error: %s", e)
-            return Response({"detail": "Impossible de valider le KYC/KYB."}, status=400)
+            logger.exception("AdminUsersViewSet.verify_kyc error: %s", e)
+            return Response({"detail": "Impossible de valider le KYC."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        UserActivityLog.objects.create(
-            user=request.user,
-            action="admin_kyc_verified",
-            details={"target_user_id": user.id, "target_username": getattr(user, "username", None)},
-            ip_address=_client_ip(request),
-            user_agent=_user_agent(request),
-        )
-
-        fresh_user = _get_user_with_documents(user.id) or user
-        return Response(UserDetailSerializer(fresh_user, context={"request": request}).data, status=200)
+    def perform_destroy(self, instance):
+        try:
+            UserActivityLog.objects.create(
+                user=self.request.user,
+                action="admin_user_deleted",
+                details={"target_user_id": instance.id, "target_username": instance.username},
+                ip_address=_client_ip(self.request),
+                user_agent=_user_agent(self.request),
+            )
+        except Exception:
+            pass
+        instance.delete()

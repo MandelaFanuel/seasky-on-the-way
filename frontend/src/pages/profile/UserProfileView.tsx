@@ -113,6 +113,42 @@ export default function UserProfileView({ isInDashboard = false }: { isInDashboa
     gender: "" as any,
     date_of_birth: "",
     accepted_terms: true,
+    // ✅ CORRECTION: Ajout de tous les champs manquants
+    address_line: "",
+    province: "",
+    commune: "",
+    colline_or_quartier: "",
+    emergency_contact_name: "",
+    emergency_contact_phone: "",
+    emergency_contact_relationship: "",
+    id_type: "" as any,
+    id_number: "",
+    id_issue_date: "",
+    id_expiry_date: "",
+    id_no_expiry: false,
+    boutique_type: "" as any,
+    boutique_services: [],
+    delivery_vehicle: "" as any,
+    vehicle_registration: "",
+    preferred_delivery_time: "",
+    delivery_instructions: "",
+    business_name: "",
+    business_entity_type: "" as any,
+    business_registration_number: "",
+    business_tax_id: "",
+    business_doc_expiry_date: "",
+    lumicash_msisdn: "",
+    accepted_contract: false,
+    client_type: "" as any,
+    supplier_type: "" as any,
+    merchant_type: "" as any,
+    delivery_type: "" as any,
+    id_front_image: null,
+    id_back_image: null,
+    passport_photo: null,
+    business_document: null,
+    photo: null,
+    signature: null,
   } as ExtendedUserRegistrationData);
 
   const [formErrors, setFormErrors] = useState<FormValidationErrors>({});
@@ -321,13 +357,13 @@ export default function UserProfileView({ isInDashboard = false }: { isInDashboa
         full_name: toStr((userData as any).full_name),
         phone: toStr((userData as any).phone),
 
-        // ✅ ces deux champs existaient déjà, on les garde
-        gender: (userData as any).gender as any,
+        // ✅ CORRECTION: Ces champs sont maintenant correctement initialisés
+        gender: toStr((userData as any).gender) as any || "",
         date_of_birth: toStr((userData as any).date_of_birth),
 
         nationality: toStr((userData as any).nationality),
 
-        id_type: (userData as any).id_type as any,
+        id_type: toStr((userData as any).id_type) as any || "",
         id_number: toStr((userData as any).id_number),
         id_issue_date: toStr((userData as any).id_issue_date),
         id_expiry_date: toStr((userData as any).id_expiry_date),
@@ -343,15 +379,15 @@ export default function UserProfileView({ isInDashboard = false }: { isInDashboa
         emergency_contact_relationship: toStr((userData as any).emergency_contact_relationship),
 
         business_name: toStr((userData as any).business_name),
-        business_entity_type: (userData as any).business_entity_type as any,
+        business_entity_type: toStr((userData as any).business_entity_type) as any || "",
         business_registration_number: toStr((userData as any).business_registration_number),
         business_tax_id: toStr((userData as any).business_tax_id),
         business_doc_expiry_date: toStr((userData as any).business_doc_expiry_date),
 
-        boutique_type: (userData as any).boutique_type as any,
+        boutique_type: toStr((userData as any).boutique_type) as any || "",
         boutique_services: toArr((userData as any).boutique_services),
 
-        delivery_vehicle: (userData as any).delivery_vehicle as any,
+        delivery_vehicle: toStr((userData as any).delivery_vehicle) as any || "",
         vehicle_registration: toStr((userData as any).vehicle_registration),
         preferred_delivery_time: toStr((userData as any).preferred_delivery_time),
         delivery_instructions: toStr((userData as any).delivery_instructions),
@@ -361,6 +397,12 @@ export default function UserProfileView({ isInDashboard = false }: { isInDashboa
         accepted_terms: true,
         accepted_contract: toBool((userData as any).accepted_contract, false),
 
+        // ✅ CORRECTION: Ajout des champs de type utilisateur
+        client_type: toStr((userData as any).client_type) as any || "",
+        supplier_type: toStr((userData as any).supplier_type) as any || "",
+        merchant_type: toStr((userData as any).merchant_type) as any || "",
+        delivery_type: toStr((userData as any).delivery_type) as any || "",
+
         // files (new upload only)
         id_front_image: null,
         id_back_image: null,
@@ -368,11 +410,6 @@ export default function UserProfileView({ isInDashboard = false }: { isInDashboa
         business_document: null,
         photo: null,
         signature: null,
-
-        client_type: (userData as any).client_type as any,
-        supplier_type: (userData as any).supplier_type as any,
-        merchant_type: (userData as any).merchant_type as any,
-        delivery_type: (userData as any).delivery_type as any,
 
         kyc_status: ((userData as any).kyc_status as any) ?? undefined,
         account_status: ((userData as any).account_status as any) ?? undefined,
@@ -651,6 +688,10 @@ export default function UserProfileView({ isInDashboard = false }: { isInDashboa
         "id_issue_date",
         "id_expiry_date",
         "id_no_expiry",
+        "client_type",
+        "supplier_type",
+        "merchant_type",
+        "delivery_type",
       ];
 
       fieldsToUpdate.forEach((key) => {

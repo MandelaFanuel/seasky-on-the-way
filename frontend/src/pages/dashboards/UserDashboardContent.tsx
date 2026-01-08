@@ -39,7 +39,7 @@ import {
 } from "@mui/icons-material";
 
 // ✅ CORRECTION : Import du composant UserProfile depuis le bon chemin
-import UserProfile from "../../pages/profile/UserProfile";
+import UserProfile from "../profile/UserProfile";
 
 type ActivityItem = {
   id: number;
