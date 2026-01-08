@@ -55,7 +55,6 @@ const Navigation: React.FC = () => {
   // ✅ photo (redux) -> s'actualise automatiquement dès que updateProfile() met à jour auth.user
   const userPhotoUrl = useMemo(() => pickPhotoUrl(user), [user]);
 
-  // ✅ IMPORTANT (Vite + Vercel): assets dans public => URL directe
   const logo = "/logos/seaskyLogo1.png";
 
   const provinces = useMemo(

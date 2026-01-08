@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 import SeaSkyMilkTitleCard from "../../sections/shared/SeaSkyMilkTitleCard";
 
 // ✅ IMPORTANT (Vite + Vercel):
-// Assets dans /public => on utilise des URLs absolues (pas d'import depuis public)
+
 const img1 = "/images/seasky1.webp";
 const img2 = "/images/seasky2.webp";
 const img3 = "/images/seasky3.webp";

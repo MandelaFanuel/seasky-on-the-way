@@ -1,6 +1,5 @@
-// src/components/logo/SeaSkyLogo.tsx
 import React from "react";
-import seaskyLogo1 from "../../assets/logos/seaskyLogo1.png";
+import seaskyLogo1 from "../../../logos/seaskyLogo1.png";
 
 type Props = {
   /** Taille en px (largeur = hauteur) */
