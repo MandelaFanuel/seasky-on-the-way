@@ -145,7 +145,7 @@ const sanitizeRegisterAccountType = (v: unknown): RegisterAccountType => {
 
 type MinimalForSkip = Pick<ExtendedUserRegistrationData, "account_type" | "delivery_type" | "supplier_type">;
 
-// Règle: pour “entreprise” (livreur entreprise / fournisseur entreprise), genre & date de naissance non requis
+// Règle: pour "entreprise" (livreur entreprise / fournisseur entreprise), genre & date de naissance non requis
 const canSkipGenderDob = (data: MinimalForSkip): boolean => {
   const at = normalize(data.account_type);
   const dt = normalize(data.delivery_type);
@@ -780,10 +780,10 @@ export default function RegisterPage() {
                   setError(null);
                   setFormErrors({});
                 }}
-                className={`p-4 rounded-lg border-2 transition-all duration-200 flex flex-col items-center justify-center ${
+                className={`p-4 rounded-lg transition-all duration-200 flex flex-col items-center justify-center ${
                   formData.client_type === type
-                    ? "border-[#0B568C] bg-blue-50 shadow-sm"
-                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow"
+                    ? "border border-[#0B568C] bg-blue-50 shadow-sm"
+                    : "border border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow"
                 }`}
               >
                 <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-3">
@@ -813,10 +813,10 @@ export default function RegisterPage() {
                 key={type}
                 type="button"
                 onClick={() => handleSupplierTypeSelect(type as any)}
-                className={`p-4 rounded-lg border-2 transition-all duration-200 flex flex-col items-center justify-center ${
+                className={`p-4 rounded-lg transition-all duration-200 flex flex-col items-center justify-center ${
                   formData.supplier_type === type
-                    ? "border-[#0B568C] bg-blue-50 shadow-sm"
-                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow"
+                    ? "border border-[#0B568C] bg-blue-50 shadow-sm"
+                    : "border border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow"
                 }`}
               >
                 <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-3">
@@ -846,10 +846,10 @@ export default function RegisterPage() {
                 key={type}
                 type="button"
                 onClick={() => handleDeliveryTypeSelect(type as any)}
-                className={`p-4 rounded-lg border-2 transition-all duration-200 flex flex-col items-center justify-center ${
+                className={`p-4 rounded-lg transition-all duration-200 flex flex-col items-center justify-center ${
                   formData.delivery_type === type
-                    ? "border-[#0B568C] bg-blue-50 shadow-sm"
-                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow"
+                    ? "border border-[#0B568C] bg-blue-50 shadow-sm"
+                    : "border border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow"
                 }`}
               >
                 <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-3">
@@ -875,10 +875,10 @@ export default function RegisterPage() {
                 key={type}
                 type="button"
                 onClick={() => handleMerchantTypeSelect(type as any)}
-                className={`p-4 rounded-lg border-2 transition-all duration-200 flex flex-col items-center justify-center ${
+                className={`p-4 rounded-lg transition-all duration-200 flex flex-col items-center justify-center ${
                   formData.boutique_type === type
-                    ? "border-[#0B568C] bg-blue-50 shadow-sm"
-                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow"
+                    ? "border border-[#0B568C] bg-blue-50 shadow-sm"
+                    : "border border-gray-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow"
                 }`}
               >
                 <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-3">
@@ -901,7 +901,7 @@ export default function RegisterPage() {
           <div className="text-center py-8">
             <p className="text-gray-700">Compte Entreprise - Catégorie unique</p>
             <p className="text-sm text-gray-500 mt-2">
-              Après inscription et vérifications, vous pourrez demander le statut “Partenaire” si vous êtes éligible.
+              Après inscription et vérifications, vous pourrez demander le statut "Partenaire" si vous êtes éligible.
             </p>
           </div>
         );
@@ -909,7 +909,7 @@ export default function RegisterPage() {
       default:
         return (
           <div className="text-center py-8">
-            <p className="text-gray-600">Veuillez d&apos;abord sélectionner un type de compte</p>
+            <p className="text-gray-600">Veuillez d'abord sélectionner un type de compte</p>
           </div>
         );
     }
@@ -974,7 +974,9 @@ export default function RegisterPage() {
                 </div>
               </div>
               <div className="bg-white px-3 py-1 rounded-full border border-blue-200">
-                <span className="text-sm font-medium text-[#0B568C]">Étape 2 sur {shouldShowProgressBar ? visibleSteps.length : 2}</span>
+                <span className="text-sm font-medium text-[#0B568C]">
+                  Étape 2 sur {shouldShowProgressBar ? visibleSteps.length : 2}
+                </span>
               </div>
             </div>
           </div>
@@ -1022,7 +1024,11 @@ export default function RegisterPage() {
               <div className="bg-blue-50 p-6 rounded-lg border border-blue-200 mt-4">
                 <h3 className="font-semibold text-[#0B568C] mb-4">Contrat SeaSky (obligatoire)</h3>
                 <div className="mt-4 flex items-center">
-                  <button type="button" onClick={() => setShowContractModal(true)} className="text-[#0B568C] hover:text-[#1A4F75] text-sm underline">
+                  <button
+                    type="button"
+                    onClick={() => setShowContractModal(true)}
+                    className="text-[#0B568C] hover:text-[#1A4F75] text-sm underline"
+                  >
                     Lire le contrat complet
                   </button>
                 </div>
@@ -1035,7 +1041,7 @@ export default function RegisterPage() {
                     className="h-4 w-4 text-[#0B568C] focus:ring-[#0B568C] border-gray-300 rounded"
                   />
                   <label htmlFor="accept-contract" className="ml-2 text-sm text-gray-900">
-                    J&apos;accepte les termes du contrat SeaSky
+                    J'accepte les termes du contrat SeaSky
                   </label>
                 </div>
               </div>
@@ -1086,7 +1092,11 @@ export default function RegisterPage() {
             <div className="bg-blue-50 p-6 rounded-lg border border-blue-200 mt-4">
               <h3 className="font-semibold text-[#0B568C] mb-4">Contrat SeaSky (obligatoire)</h3>
               <div className="mt-4 flex items-center">
-                <button type="button" onClick={() => setShowContractModal(true)} className="text-[#0B568C] hover:text-[#1A4F75] text-sm underline">
+                <button
+                  type="button"
+                  onClick={() => setShowContractModal(true)}
+                  className="text-[#0B568C] hover:text-[#1A4F75] text-sm underline"
+                >
                   Lire le contrat complet
                 </button>
               </div>
@@ -1099,7 +1109,7 @@ export default function RegisterPage() {
                   className="h-4 w-4 text-[#0B568C] focus:ring-[#0B568C] border-gray-300 rounded"
                 />
                 <label htmlFor="accept-contract" className="ml-2 text-sm text-gray-900">
-                  J&apos;accepte les termes du contrat SeaSky
+                  J'accepte les termes du contrat SeaSky
                 </label>
               </div>
             </div>
@@ -1115,7 +1125,7 @@ export default function RegisterPage() {
     return (
       <div className="text-center py-8 text-red-600">
         <h3 className="text-xl font-semibold mb-4">Erreur: Étape non définie</h3>
-        <p>Veuillez revenir à l&apos;étape précédente</p>
+        <p>Veuillez revenir à l'étape précédente</p>
       </div>
     );
   }, [
@@ -1141,14 +1151,15 @@ export default function RegisterPage() {
   // ========================= RENDER =========================
   return (
     <>
-      <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 pt-24 pb-40 px-4 mt-4">
-        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
+      {/* ✅ Responsive-only: padding extérieur un peu réduit (mobile) pour élargir les champs */}
+      <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50/30 pt-20 pb-40 px-3 sm:px-4">
+        <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
           {/* Header */}
-          <div className="p-8 bg-white border-b border-gray-200">
-            <div className="flex items-center justify-between">
+          <div className="p-5 sm:p-6 md:p-8 bg-white">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Inscrivez-vous</h1>
-                <p className="text-gray-600 text-sm">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Inscrivez-vous</h1>
+                <p className="text-gray-600 text-sm md:text-base">
                   {shouldShowProgressBar
                     ? `Rejoignez notre plateforme en ${visibleSteps.length} courtes étapes`
                     : currentStep === 0
@@ -1191,7 +1202,7 @@ export default function RegisterPage() {
           </div>
 
           {/* Body */}
-          <div className="p-8">
+          <div className="p-5 sm:p-6 md:p-8">
             {error && <AlertBanner type="error" message={error} onClose={() => setError(null)} className="mb-6 animate-fadeIn" />}
             {success && <AlertBanner type="success" message={success} className="mb-6 animate-fadeIn" />}
 
@@ -1208,15 +1219,22 @@ export default function RegisterPage() {
             )}
 
             <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-              <div className="bg-gray-50 p-6 rounded-lg border border-gray-200 min-h-[400px] animate-scaleIn">{renderStepContent()}</div>
+              {/* ✅ Responsive-only: on évite l'empilement de bordures (mobile => pas de border) */}
+              {/* ✅ Mobile: padding réduit + bg transparent pour laisser respirer les inputs */}
+              <div className="bg-transparent sm:bg-gray-50 p-0 sm:p-6 rounded-xl border-0 sm:border sm:border-gray-200 min-h-[400px] animate-scaleIn">
+                {/* ✅ petit padding interne mobile pour conserver l'espacement sans “double cadre” */}
+                <div className="px-0 sm:px-0 py-0">
+                  {renderStepContent()}
+                </div>
+              </div>
 
-              <div className="flex gap-4 pt-4">
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 {currentStep > 0 ? (
                   <button
                     type="button"
                     onClick={handlePreviousStep}
                     disabled={isLoading}
-                    className="flex-1 bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 px-6 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98]"
+                    className="flex-1 bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 px-6 rounded-xl border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98]"
                   >
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -1231,7 +1249,7 @@ export default function RegisterPage() {
                   type="button"
                   onClick={handleNextStep}
                   disabled={isLoading}
-                  className={`flex-1 font-medium py-3 px-6 rounded-lg shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-300 transform hover:scale-[1.03] active:scale-[0.97] ${
+                  className={`flex-1 font-medium py-3 px-6 rounded-xl shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-all duration-300 transform hover:scale-[1.03] active:scale-[0.97] ${
                     currentStep === visibleSteps.length - 1
                       ? "bg-linear-to-r from-green-600 to-emerald-500 hover:from-green-700 hover:to-emerald-600 text-white"
                       : "bg-linear-to-r from-[#0B568C] to-[#1A4F75] hover:from-[#1A4F75] hover:to-[#0B568C] text-white"
@@ -1286,7 +1304,7 @@ export default function RegisterPage() {
             </form>
 
             <div className="mt-8 pt-6 border-t border-gray-200 text-center animate-fadeIn">
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-600 text-sm md:text-base">
                 Vous avez déjà un compte ?{" "}
                 <button
                   onClick={() => navigate("/login")}
