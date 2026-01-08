@@ -3,7 +3,7 @@
  * SeaSky Platform - API v1 Client (Docker-ready + Browser-ready)
  * ✅ JWT-first (no cookies)
  * ✅ Works in:
- *   - Browser (Vercel/Prod): /api/v1  (proxied by vercel.json)
+ *   - Browser (Vercel/Prod): /api/v1  (proxied by vercel.json) OR direct Render via VITE_API_URL
  *   - Browser (Local):       http://localhost:8000/api/v1  OR /api/v1 with Vite proxy
  *   - Docker compose:        http://backend:8000/api/v1
  * ✅ Safe URL normalization
@@ -34,15 +34,11 @@ function isBrowser() {
 
 /**
  * ✅ Default base URL (IMPORTANT):
- * - In browser (Vercel/HTTPS): use SAME-ORIGIN proxy => "/api/v1"
- * - In local browser: you can set VITE_API_URL=http://localhost:8000/api/v1 (or keep "/api/v1" with Vite proxy)
+ * - In browser: can be "/api/v1" (proxy) OR direct Render via VITE_API_URL
  * - In Docker: http://backend:8000/api/v1
  */
 function defaultBaseUrl() {
-  if (isBrowser()) {
-    // PRODUCTION SAFE DEFAULT (works on Vercel with rewrites)
-    return "/api/v1";
-  }
+  if (isBrowser()) return "/api/v1";
   return "http://backend:8000/api/v1";
 }
 
@@ -69,9 +65,10 @@ function normalizeBaseUrl(input?: string) {
 
 /**
  * Prefer VITE_API_URL.
- * - Vercel/Prod:  VITE_API_URL=/api/v1   (recommended)
- * - Local:        VITE_API_URL=http://localhost:8000/api/v1  (optional)
- * - Docker:       VITE_API_URL=http://backend:8000/api/v1
+ * - Vercel/Prod (robust):  VITE_API_URL=https://seasky-backend.onrender.com/api/v1
+ * - Vercel/Prod (proxy):   VITE_API_URL=/api/v1
+ * - Local:                 VITE_API_URL=http://localhost:8000/api/v1  (optional)
+ * - Docker:                VITE_API_URL=http://backend:8000/api/v1
  */
 export const API_BASE_URL = normalizeBaseUrl((import.meta as any).env?.VITE_API_URL);
 
@@ -269,7 +266,11 @@ async function safeJson(res: Response) {
   }
 }
 
-function withTimeout(ms = 20000) {
+// ✅ timeouts: Render peut "sleep" en free, et FormData (upload) prend plus de temps
+const DEFAULT_TIMEOUT_MS = (import.meta as any).env?.PROD ? 60000 : 20000;
+const UPLOAD_TIMEOUT_MS = (import.meta as any).env?.PROD ? 120000 : 30000;
+
+function withTimeout(ms: number) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), ms);
   return { controller, clear: () => clearTimeout(id) };
@@ -287,6 +288,18 @@ function fetchModeForBase(base: string): RequestMode {
   return "cors";
 }
 
+// ✅ debug body safe (FormData/JSON)
+function debugBody(body: any) {
+  try {
+    if (!body) return null;
+    if (typeof FormData !== "undefined" && body instanceof FormData) return "[FormData]";
+    if (typeof body === "string") return JSON.parse(body);
+    return body;
+  } catch {
+    return "[unserializable]";
+  }
+}
+
 export async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const url = joinUrl(API_BASE_URL, path);
 
@@ -299,10 +312,11 @@ export async function request<T>(path: string, opts: RequestInit = {}): Promise<
   const auth = authHeader();
   Object.entries(auth).forEach(([k, v]) => headers.set(k, String(v)));
 
-  const { controller, clear } = withTimeout(20000);
+  const timeoutMs = isFormData ? UPLOAD_TIMEOUT_MS : DEFAULT_TIMEOUT_MS;
+  const { controller, clear } = withTimeout(timeoutMs);
 
   try {
-    if (isDebug()) console.log("[SeaSky API] ->", opts.method || "GET", url, opts.body ? JSON.parse(opts.body as string) : {});
+    if (isDebug()) console.log("[SeaSky API] ->", opts.method || "GET", url, debugBody(opts.body));
 
     const res = await fetch(url, {
       mode: fetchModeForBase(API_BASE_URL),
@@ -326,7 +340,7 @@ export async function request<T>(path: string, opts: RequestInit = {}): Promise<
     if (e instanceof SeaSkyApiError) throw e;
 
     if (e?.name === "AbortError") {
-      throw new SeaSkyApiError("Timeout: le serveur met trop de temps à répondre.", undefined, { url });
+      throw new SeaSkyApiError("Timeout: le serveur met trop de temps à répondre.", undefined, { url, timeoutMs });
     }
 
     throw new SeaSkyApiError("Serveur injoignable (backend down ou URL incorrecte).", undefined, {
@@ -355,58 +369,36 @@ export async function registerUser(payload: FormData | Json): Promise<RegisterRe
   return handleAuthResponse(res) as RegisterResponse;
 }
 
-// ✅ FONCTION LOGIN AMÉLIORÉE avec meilleure gestion des erreurs
 export async function loginUser(username: string, password: string): Promise<LoginResponse> {
   try {
     const res = await request<LoginResponse>(ENDPOINTS.AUTH.LOGIN, {
       method: "POST",
       body: JSON.stringify({ username, password }),
     });
-    
-    console.log("[SeaSky API] Login response:", res);
-    
-    // ✅ Si la réponse contient une erreur de détail
+
+    if (isDebug()) console.log("[SeaSky API] Login response:", res);
+
     if (res.detail && res.detail.includes("Identifiants invalides")) {
-      throw new SeaSkyApiError(
-        "Nom d'utilisateur ou mot de passe incorrect",
-        403,
-        res
-      );
+      throw new SeaSkyApiError("Nom d'utilisateur ou mot de passe incorrect", 403, res);
     }
-    
-    // ✅ Si succès mais sans tokens valides
+
     if (!res.access && !res.tokens?.access) {
-      throw new SeaSkyApiError(
-        "Réponse de connexion incomplète: tokens manquants",
-        500,
-        res
-      );
+      throw new SeaSkyApiError("Réponse de connexion incomplète: tokens manquants", 500, res);
     }
-    
+
     return handleAuthResponse(res) as LoginResponse;
   } catch (error: any) {
-    console.error("[SeaSky API] Login error:", error);
-    
-    // ✅ Améliorer les messages d'erreur
-    if (error instanceof SeaSkyApiError) {
-      if (error.status === 403) {
-        if (error.payload?.detail?.includes("Identifiants invalides")) {
-          throw new SeaSkyApiError(
-            "Nom d'utilisateur ou mot de passe incorrect",
-            403,
-            error.payload
-          );
-        }
-        if (error.payload?.detail?.includes("compte est désactivé")) {
-          throw new SeaSkyApiError(
-            "Votre compte est désactivé. Contactez l'administrateur.",
-            403,
-            error.payload
-          );
-        }
+    if (isDebug()) console.error("[SeaSky API] Login error:", error);
+
+    if (error instanceof SeaSkyApiError && error.status === 403) {
+      if (error.payload?.detail?.includes("Identifiants invalides")) {
+        throw new SeaSkyApiError("Nom d'utilisateur ou mot de passe incorrect", 403, error.payload);
+      }
+      if (error.payload?.detail?.includes("compte est désactivé")) {
+        throw new SeaSkyApiError("Votre compte est désactivé. Contactez l'administrateur.", 403, error.payload);
       }
     }
-    
+
     throw error;
   }
 }
