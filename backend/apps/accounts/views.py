@@ -240,40 +240,51 @@ class AuthViewSet(viewsets.GenericViewSet):
     @method_decorator(csrf_exempt)
     @action(detail=False, methods=["post"], permission_classes=[AllowAny], authentication_classes=[])
     def login(self, request):
-        serializer = LoginSerializer(data=request.data, context={"request": request})
-        serializer.is_valid(raise_exception=True)
-
-        user = serializer.validated_data["user"]
-
+        # LOGGING AMÉLIORÉ
+        username = request.data.get('username', '')
+        ip_address = _client_ip(request)
+        logger.info(f"[Auth] Login attempt - IP: {ip_address}, Username: {username}")
+        
         try:
-            user.last_login_at = timezone.now()
-            user.save(update_fields=["last_login_at"])
-        except Exception:
-            pass
+            serializer = LoginSerializer(data=request.data, context={"request": request})
+            serializer.is_valid(raise_exception=True)
+            
+            user = serializer.validated_data["user"]
+            logger.info(f"[Auth] Login successful - User: {user.username}, ID: {user.id}")
+            
+            try:
+                user.last_login_at = timezone.now()
+                user.save(update_fields=["last_login_at"])
+            except Exception:
+                pass
 
-        tokens = _tokens_for_user(user)
+            tokens = _tokens_for_user(user)
 
-        UserActivityLog.objects.create(
-            user=user,
-            action="login_success",
-            details={"login_method": "password"},
-            ip_address=_client_ip(request),
-            user_agent=_user_agent(request),
-        )
+            UserActivityLog.objects.create(
+                user=user,
+                action="login_success",
+                details={"login_method": "password"},
+                ip_address=_client_ip(request),
+                user_agent=_user_agent(request),
+            )
 
-        fresh_user = _get_user_with_documents(user.id) or user
+            fresh_user = _get_user_with_documents(user.id) or user
 
-        return Response(
-            {
-                "success": True,
-                "message": _("Connexion réussie"),
-                "user": UserDetailSerializer(fresh_user, context={"request": request}).data,
-                "tokens": tokens,
-                "access": tokens["access"],
-                "refresh": tokens["refresh"],
-            },
-            status=status.HTTP_200_OK,
-        )
+            return Response(
+                {
+                    "success": True,
+                    "message": _("Connexion réussie"),
+                    "user": UserDetailSerializer(fresh_user, context={"request": request}).data,
+                    "tokens": tokens,
+                    "access": tokens["access"],
+                    "refresh": tokens["refresh"],
+                },
+                status=status.HTTP_200_OK,
+            )
+            
+        except Exception as e:
+            logger.error(f"[Auth] Login failed - Username: {username}, Error: {str(e)}")
+            raise
 
     @method_decorator(csrf_exempt)
     @action(detail=False, methods=["post"], permission_classes=[AllowAny], authentication_classes=[])
@@ -484,7 +495,6 @@ class AgentViewSet(viewsets.ModelViewSet):
 
 
 # ========================= ✅ Admin Users (LIST + DOCS + VERIFY + CRUD) =========================
-
 class AdminUsersViewSet(viewsets.ModelViewSet):
     """
     Endpoints attendus par ton frontend:
@@ -605,7 +615,7 @@ class AdminUsersViewSet(viewsets.ModelViewSet):
             if getattr(user, "account_status", "") == "pending_kyc":
                 user.account_status = "active"
 
-            # ✅ updated_at est auto_now, mais update_fields peut l’inclure sans casser
+            # ✅ updated_at est auto_now, mais update_fields peut l'inclure sans casser
             user.save(update_fields=["kyc_status", "kyc_verified_at", "account_status", "updated_at"])
 
             UserActivityLog.objects.create(

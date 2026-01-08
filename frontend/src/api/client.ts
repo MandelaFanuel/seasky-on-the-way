@@ -111,6 +111,9 @@ export type LoginResponse = {
   tokens?: { access?: string; refresh?: string };
   user?: any;
   message?: string;
+  success?: boolean;
+  detail?: string;
+  error?: string;
   [k: string]: any;
 };
 
@@ -121,6 +124,7 @@ export type RegisterResponse = {
   tokens?: { access?: string; refresh?: string };
   message?: string;
   errors?: Record<string, string[]>;
+  success?: boolean;
   [k: string]: any;
 };
 
@@ -298,7 +302,7 @@ export async function request<T>(path: string, opts: RequestInit = {}): Promise<
   const { controller, clear } = withTimeout(20000);
 
   try {
-    if (isDebug()) console.log("[SeaSky API] ->", opts.method || "GET", url);
+    if (isDebug()) console.log("[SeaSky API] ->", opts.method || "GET", url, opts.body ? JSON.parse(opts.body as string) : {});
 
     const res = await fetch(url, {
       mode: fetchModeForBase(API_BASE_URL),
@@ -351,12 +355,60 @@ export async function registerUser(payload: FormData | Json): Promise<RegisterRe
   return handleAuthResponse(res) as RegisterResponse;
 }
 
+// ✅ FONCTION LOGIN AMÉLIORÉE avec meilleure gestion des erreurs
 export async function loginUser(username: string, password: string): Promise<LoginResponse> {
-  const res = await request<LoginResponse>(ENDPOINTS.AUTH.LOGIN, {
-    method: "POST",
-    body: JSON.stringify({ username, password }),
-  });
-  return handleAuthResponse(res) as LoginResponse;
+  try {
+    const res = await request<LoginResponse>(ENDPOINTS.AUTH.LOGIN, {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    });
+    
+    console.log("[SeaSky API] Login response:", res);
+    
+    // ✅ Si la réponse contient une erreur de détail
+    if (res.detail && res.detail.includes("Identifiants invalides")) {
+      throw new SeaSkyApiError(
+        "Nom d'utilisateur ou mot de passe incorrect",
+        403,
+        res
+      );
+    }
+    
+    // ✅ Si succès mais sans tokens valides
+    if (!res.access && !res.tokens?.access) {
+      throw new SeaSkyApiError(
+        "Réponse de connexion incomplète: tokens manquants",
+        500,
+        res
+      );
+    }
+    
+    return handleAuthResponse(res) as LoginResponse;
+  } catch (error: any) {
+    console.error("[SeaSky API] Login error:", error);
+    
+    // ✅ Améliorer les messages d'erreur
+    if (error instanceof SeaSkyApiError) {
+      if (error.status === 403) {
+        if (error.payload?.detail?.includes("Identifiants invalides")) {
+          throw new SeaSkyApiError(
+            "Nom d'utilisateur ou mot de passe incorrect",
+            403,
+            error.payload
+          );
+        }
+        if (error.payload?.detail?.includes("compte est désactivé")) {
+          throw new SeaSkyApiError(
+            "Votre compte est désactivé. Contactez l'administrateur.",
+            403,
+            error.payload
+          );
+        }
+      }
+    }
+    
+    throw error;
+  }
 }
 
 export async function logoutUser(): Promise<{ message?: string }> {

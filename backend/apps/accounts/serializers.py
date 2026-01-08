@@ -4,6 +4,8 @@ from __future__ import annotations
 from datetime import date
 import json
 from typing import Any, Optional
+import re  # AJOUT IMPORTANT
+import secrets
 
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.password_validation import validate_password
@@ -17,7 +19,6 @@ from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import UserDocument
-import secrets
 
 User = get_user_model()
 
@@ -57,13 +58,29 @@ def _normalize_phone(value: str) -> str:
     return digits
 
 
+# FONCTIONS MANQUANTES AJOUTÉES
 def _looks_like_phone(value: str) -> bool:
-    digits = _normalize_phone(value)
-    return digits.isdigit() and len(digits) >= 8
+    """
+    Vérifie si la chaîne ressemble à un numéro de téléphone.
+    """
+    if not value:
+        return False
+    # Supprime tous les caractères non numériques
+    digits = re.sub(r'\D', '', value)
+    return len(digits) >= 8 and len(digits) <= 15
 
 
 def _burundi_phone_prefix_ok(digits: str) -> bool:
-    return digits.startswith(("61", "62", "65", "66", "67", "68", "69", "71", "72", "76", "77", "78", "79"))
+    """
+    Vérifie si le numéro commence par un préfixe burundais valide.
+    """
+    if not digits:
+        return False
+    burundi_prefixes = [
+        "61", "62", "65", "66", "67", "68", "69",
+        "71", "72", "76", "77", "78", "79", "60", "63"
+    ]
+    return any(digits.startswith(prefix) for prefix in burundi_prefixes)
 
 
 def _issue_tokens(user) -> dict:
@@ -250,7 +267,6 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 # ========================= ✅ ADMIN WRITE SERIALIZER (CRUD admin/users) =========================
-
 class AdminUserWriteSerializer(serializers.ModelSerializer):
     """
     Serializer utilisé pour CREATE/PATCH via /admin/users/
@@ -361,7 +377,6 @@ class AdminUserWriteSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
-
 
 
 class UserDocumentSerializer(serializers.ModelSerializer):
@@ -993,6 +1008,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         return {"success": True, "message": _("✅ Inscription réussie !"), "user": rep_user, "tokens": tokens}
 
 
+# ========================= LOGIN SERIALIZER CORRIGÉ =========================
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField(required=True, help_text=_("Nom d'utilisateur / email / téléphone"))
     password = serializers.CharField(write_only=True, required=True, style={"input_type": "password"})
@@ -1003,39 +1019,54 @@ class LoginSerializer(serializers.Serializer):
         password = attrs.get("password") or ""
 
         if not identifier or not password:
-            raise AuthenticationFailed(_("Identifiants invalides"))
+            raise AuthenticationFailed(_("Nom d'utilisateur et mot de passe requis."))
 
         user = None
-
-        # email
-        if "@" in identifier:
+        
+        # 1. Essayer d'abord avec username exact
+        if identifier:
             try:
-                u = User.objects.filter(email__iexact=identifier).first()
-                if u:
-                    user = authenticate(request=request, username=u.username, password=password)
+                # Chercher par username
+                user_obj = User.objects.filter(username=identifier).first()
+                if user_obj:
+                    user = authenticate(request=request, username=user_obj.username, password=password)
+                    
+                    if not user and user_obj.email:
+                        # Essayer aussi avec email si username échoue
+                        user = authenticate(request=request, username=user_obj.email, password=password)
+            except Exception:
+                user = None
+
+        # 2. Si échec, essayer avec email
+        if not user and "@" in identifier:
+            try:
+                user_obj = User.objects.filter(email__iexact=identifier).first()
+                if user_obj:
+                    user = authenticate(request=request, username=user_obj.username, password=password)
             except MultipleObjectsReturned:
                 raise AuthenticationFailed(_("Plusieurs comptes utilisent cet email. Contactez le support."))
             except Exception:
                 user = None
 
-        # phone
+        # 3. Si échec, essayer avec téléphone (normalisé)
         if not user and _looks_like_phone(identifier):
             digits = _normalize_phone(identifier)
-            try:
-                u = User.objects.filter(phone=digits).first()
-                if u:
-                    user = authenticate(request=request, username=u.username, password=password)
-            except MultipleObjectsReturned:
-                raise AuthenticationFailed(_("Plusieurs comptes utilisent ce téléphone. Contactez le support."))
-            except Exception:
-                user = None
+            if _burundi_phone_prefix_ok(digits):
+                try:
+                    user_obj = User.objects.filter(phone=digits).first()
+                    if user_obj:
+                        user = authenticate(request=request, username=user_obj.username, password=password)
+                except MultipleObjectsReturned:
+                    raise AuthenticationFailed(_("Plusieurs comptes utilisent ce téléphone. Contactez le support."))
+                except Exception:
+                    user = None
 
-        # username
+        # 4. Dernier essai: authentification directe avec l'identifiant
         if not user:
             user = authenticate(request=request, username=identifier, password=password)
 
         if not user:
-            raise AuthenticationFailed(_("Identifiants invalides"))
+            raise AuthenticationFailed(_("Nom d'utilisateur ou mot de passe incorrect."))
 
         if not getattr(user, "is_active", True):
             raise PermissionDenied(_("Le compte est désactivé"))
