@@ -43,14 +43,17 @@ def _bool_env(name: str, default: bool = False) -> bool:
 # ========================= APP META =========================
 APP_NAME = os.getenv("APP_NAME", "SeaSky API")
 APP_VERSION = os.getenv("APP_VERSION", "1.0.0")
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development" if not IS_RENDER else "production")
+ENVIRONMENT = os.getenv("ENVIRONMENT", "production" if IS_RENDER else "development")
 
 # ========================= SECURITY CONFIGURATION =========================
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-dev-key-change-in-production-2025")
-DEBUG = _bool_env("DJANGO_DEBUG", default=True)
 
-if not DEBUG:
-    # Render/proxy HTTPS
+# ✅ IMPORTANT: sur Render on force DEBUG=False par défaut (même si DJANGO_DEBUG oublié)
+DEBUG = _bool_env("DJANGO_DEBUG", default=False if IS_RENDER else True)
+
+# ✅ Render/Proxy HTTPS headers
+# (actif en prod et sur render)
+if IS_RENDER or not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # ========================= HOST CONFIGURATION =========================
@@ -81,9 +84,7 @@ THIRD_PARTY_APPS = [
     "django_filters",
     "django_redis",
     "channels",
-
-    # ✅ django-storages (boto3 backend)
-    "storages",
+    "storages",  # ✅ django-storages (boto3 backend)
 ]
 
 if DEBUG and _bool_env("ENABLE_DEBUG_TOOLBAR", default=True):
@@ -108,7 +109,10 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+
+    # ✅ CORS DOIT être avant CommonMiddleware
     "corsheaders.middleware.CorsMiddleware",
+
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -232,38 +236,25 @@ MEDIA_ROOT = str(BASE_DIR / "media")
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ========================= STORAGE (LOCAL / S3) =========================
-# ✅ Active S3 uniquement si USE_S3=1
 USE_S3 = _bool_env("USE_S3", default=False)
 
 if USE_S3:
-    # --- AWS S3 / compatible Spaces/MinIO via endpoint ---
     AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
     AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
     AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME", "")
     AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "") or None
-
-    # optionnel: pour DigitalOcean Spaces / MinIO / autre S3-compatible
     AWS_S3_ENDPOINT_URL = os.getenv("AWS_S3_ENDPOINT_URL", "") or None
-
-    # optionnel: CDN/custom domain
     AWS_S3_CUSTOM_DOMAIN = os.getenv("AWS_S3_CUSTOM_DOMAIN", "") or None
 
     AWS_DEFAULT_ACL = None
-
-    # Public URLs (mets True si tu veux URL signées)
     AWS_QUERYSTRING_AUTH = _bool_env("AWS_QUERYSTRING_AUTH", default=False)
-
-    # Cache headers
     AWS_S3_OBJECT_PARAMETERS = {"CacheControl": os.getenv("AWS_S3_CACHE_CONTROL", "max-age=86400")}
 
-    # Préfixes dans le bucket
     AWS_LOCATION_MEDIA = (os.getenv("AWS_LOCATION_MEDIA", "media") or "media").strip().strip("/")
     AWS_LOCATION_STATIC = (os.getenv("AWS_LOCATION_STATIC", "static") or "static").strip().strip("/")
 
-    # Pour éviter que boto3 rajoute des ACL par défaut
     AWS_S3_FILE_OVERWRITE = False
 
-    # ✅ Django 4.2+ STORAGES
     STORAGES = {
         "default": {
             "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
@@ -274,17 +265,14 @@ if USE_S3:
                 "querystring_auth": AWS_QUERYSTRING_AUTH,
             },
         },
-        # On garde WhiteNoise pour static (Render OK)
         "staticfiles": {
             "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
         },
     }
 
-    # MEDIA_URL S3
     if AWS_S3_CUSTOM_DOMAIN:
         MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_LOCATION_MEDIA}/"
     else:
-        # AWS standard domain (si endpoint custom, django-storages gère aussi les URLs)
         if AWS_STORAGE_BUCKET_NAME:
             MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{AWS_LOCATION_MEDIA}/"
 
@@ -296,11 +284,6 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticatedOrReadOnly"
     ],
-
-    # 'DEFAULT_PERMISSION_CLASSES': [
-    #     'rest_framework.permissions.AllowAny',
-    # ],
-
 
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": int(os.getenv("PAGINATION_PAGE_SIZE", "20")),
@@ -332,35 +315,48 @@ SIMPLE_JWT = {
     "USER_ID_CLAIM": "user_id",
 }
 
-# ========================= CORS / CSRF =========================
+# ========================= CORS / CSRF (DIRECT RENDER) =========================
 from corsheaders.defaults import default_headers, default_methods  # noqa: E402
 
-CORS_ALLOW_CREDENTIALS = True
+# ✅ JWT-first (pas de cookies requis) => credentials pas nécessaires
+# (tu peux laisser True si tu utilises session/admin cross-site, mais pour l’API JWT c’est mieux False)
+CORS_ALLOW_CREDENTIALS = _bool_env("CORS_ALLOW_CREDENTIALS", default=False)
 
-CORS_ALLOWED_ORIGINS = _split_csv(os.getenv("CORS_ALLOWED_ORIGINS", "")) or [
+# ✅ Origins explicites (idéal pour prod)
+# Mets ici ton/tes domaines Vercel "stables" (prod)
+DEFAULT_CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-]
 
+    # ✅ Exemple (mets ton domaine prod exact si tu en as un fixe)
+    # "https://seasky-on-the-way-scvm.vercel.app",
+]
+CORS_ALLOWED_ORIGINS = _split_csv(os.getenv("CORS_ALLOWED_ORIGINS", "")) or DEFAULT_CORS_ALLOWED_ORIGINS
+
+# ✅ Autorise aussi tous les preview vercel: *.vercel.app
 CORS_ALLOWED_ORIGIN_REGEXES = _split_csv(os.getenv("CORS_ALLOWED_ORIGIN_REGEXES", "")) or [
     r"^https://.*\.vercel\.app$",
 ]
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
 ]
+
 CORS_ALLOW_METHODS = list(default_methods)
 CORS_EXPOSE_HEADERS = ["Authorization", "Content-Type"]
 
-# Permettre de configurer CSRF_TRUSTED_ORIGINS via env (comma separated)
+# ✅ Optionnel mais propre: limite cors aux URLs API uniquement
+CORS_URLS_REGEX = r"^/api/.*$"
+
+# ✅ CSRF: même si JWT n’en a pas besoin, Django admin/session peut en dépendre
 _env_csrf = _split_csv(os.getenv("CSRF_TRUSTED_ORIGINS", ""))
 _default_csrf = [
     "http://localhost:5173",
@@ -368,6 +364,8 @@ _default_csrf = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
     "https://seasky-backend.onrender.com",
+    # ✅ autorise les domaines vercel (preview + prod)
+    "https://*.vercel.app",
 ]
 CSRF_TRUSTED_ORIGINS = _env_csrf or _default_csrf
 
@@ -470,7 +468,6 @@ if DEBUG and "debug_toolbar" in INSTALLED_APPS:
     INTERNAL_IPS = ["127.0.0.1", "localhost"]
 
 # ========================= OTHER HELPERS =========================
-# flag to control whether Django serves media files in production (temporary fallback)
 SERVE_MEDIA = _bool_env("SERVE_MEDIA", default=False)
 
 # End of settings.py
