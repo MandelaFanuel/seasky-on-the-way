@@ -12,6 +12,14 @@ import {
   useMediaQuery,
   Tabs,
   Tab,
+  IconButton,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  ListItemButton,
 } from "@mui/material";
 import {
   AdminPanelSettings,
@@ -28,6 +36,8 @@ import {
   Bolt as BoltIcon,
   QrCodeScanner as QrCodeScannerIcon,
   Person as PersonIcon,
+  Menu as MenuIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
 
 import DriverDashboard, { DriverDashboardHandle } from "../../components/admin/drivers/DriverDashboard";
@@ -55,7 +65,8 @@ type AdminTab =
 
 export default function AdminDashboard() {
   const theme = useTheme();
-  const isMobile = useMediaQuery("(max-width:600px)");
+  const isMobile = useMediaQuery("(max-width:900px)");
+  const isSmallMobile = useMediaQuery("(max-width:600px)");
 
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -70,6 +81,7 @@ export default function AdminDashboard() {
   const reportsRef = useRef<ReportsDashboardHandle>(null);
 
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [lastScrollTop, setLastScrollTop] = useState(0);
@@ -98,13 +110,13 @@ export default function AdminDashboard() {
   }, [lastScrollTop]);
 
   const handleOpenCreateFromParent = useCallback(() => {
-    // ✅ On garde la logique existante, mais "users" ne doit plus ouvrir de création
     if (activeTab === "drivers") driverRef.current?.openCreate();
     if (activeTab === "agents") agentRef.current?.openCreate();
     if (activeTab === "pdv") pdvRef.current?.openCreate();
     if (activeTab === "orders") ordersRef.current?.openCreate?.();
     if (activeTab === "driver_requests") requestsRef.current?.openCreate?.();
-  }, [activeTab]);
+    if (isMobile) setMobileMenuOpen(false);
+  }, [activeTab, isMobile]);
 
   const handleRefreshFromParent = useCallback(async () => {
     if (activeTab === "overview") await realtimeRef.current?.refresh?.();
@@ -117,9 +129,18 @@ export default function AdminDashboard() {
     if (activeTab === "orders") await ordersRef.current?.refresh?.();
     if (activeTab === "driver_requests") await requestsRef.current?.refresh?.();
     if (activeTab === "reports") await reportsRef.current?.refresh?.();
-  }, [activeTab]);
+    if (isMobile) setMobileMenuOpen(false);
+  }, [activeTab, isMobile]);
 
-  const headerHeight = useMemo(() => (isHeaderExpanded ? 200 : 160), [isHeaderExpanded]);
+  const handleTabChange = useCallback((tab: AdminTab) => {
+    setActiveTab(tab);
+    if (isMobile) setMobileMenuOpen(false);
+  }, [isMobile]);
+
+  const headerHeight = useMemo(() => {
+    if (isMobile) return isHeaderExpanded ? 180 : 140;
+    return isHeaderExpanded ? 200 : 160;
+  }, [isHeaderExpanded, isMobile]);
 
   const createLabel = useMemo(() => {
     if (activeTab === "drivers") return "Nouveau Chauffeur";
@@ -135,7 +156,6 @@ export default function AdminDashboard() {
     return <PersonAddIcon />;
   }, [activeTab]);
 
-  // ✅ "users" retiré: admin ne peut pas créer des utilisateurs
   const canCreate = useMemo(() => {
     return activeTab === "drivers" || activeTab === "agents" || activeTab === "pdv";
   }, [activeTab]);
@@ -156,13 +176,176 @@ export default function AdminDashboard() {
     return map[activeTab] || "Admin";
   }, [activeTab]);
 
+  const tabItems = useMemo(() => [
+    { value: "overview", label: "Aperçu", icon: <DashboardIcon /> },
+    { value: "profile", label: "Profil", icon: <PersonIcon /> },
+    { value: "users", label: "Utilisateurs", icon: <PeopleIcon /> },
+    { value: "drivers", label: "Chauffeurs", icon: <PersonAddIcon /> },
+    { value: "agents", label: "Agents", icon: <SupportAgentIcon /> },
+    { value: "pdv", label: "PDV", icon: <StoreIcon /> },
+    { value: "realtime", label: "Temps réel", icon: <BoltIcon /> },
+    { value: "orders", label: "Commandes", icon: <ReceiptLongIcon /> },
+    { value: "driver_requests", label: "Demandes livreur", icon: <PendingActionsIcon /> },
+    { value: "reports", label: "Rapports", icon: <QueryStatsIcon /> },
+  ], []);
+
+  // Mobile Menu Drawer
+  const renderMobileMenu = () => (
+    <Drawer
+      anchor="right"
+      open={mobileMenuOpen}
+      onClose={() => setMobileMenuOpen(false)}
+      PaperProps={{
+        sx: {
+          width: { xs: "100%", sm: 350 },
+          backgroundColor: "white",
+          backgroundImage: "none",
+          boxShadow: theme.shadows[16],
+        },
+      }}
+    >
+      <Box sx={{ p: 2, backgroundColor: theme.palette.primary.main, color: "white" }}>
+        <Box display="flex" alignItems="center" justifyContent="space-between">
+          <Typography component="h2" variant="h6" fontWeight={700}>
+            Menu Admin
+          </Typography>
+          <IconButton onClick={() => setMobileMenuOpen(false)} sx={{ color: "white" }}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
+        <Typography variant="caption" sx={{ opacity: 0.9 }}>
+          Navigation rapide
+        </Typography>
+      </Box>
+      
+      <List sx={{ p: 2 }}>
+        {/* Boutons d'action */}
+        <Box sx={{ mb: 3, p: 2, backgroundColor: alpha(theme.palette.primary.light, 0.05), borderRadius: 2 }}>
+          <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1, color: theme.palette.primary.dark }}>
+            Actions rapides
+          </Typography>
+          <Stack spacing={1}>
+            {canCreate && (
+              <Button
+                variant="contained"
+                startIcon={createIcon}
+                onClick={handleOpenCreateFromParent}
+                fullWidth
+                size="medium"
+                sx={{
+                  borderRadius: "50px",
+                  textTransform: "none",
+                  fontWeight: 600,
+                  background: "linear-gradient(135deg, #0B568C 0%, #27B1E4 100%)",
+                }}
+              >
+                {createLabel}
+              </Button>
+            )}
+
+            <Button
+              variant="outlined"
+              startIcon={<RefreshIcon />}
+              onClick={handleRefreshFromParent}
+              fullWidth
+              size="medium"
+              disabled={childLoading}
+              sx={{
+                borderRadius: "50px",
+                textTransform: "none",
+                fontWeight: 600,
+                borderWidth: 2,
+                borderColor: "#0B568C",
+                color: "#0B568C",
+              }}
+            >
+              {childLoading ? "Chargement..." : "Actualiser"}
+            </Button>
+
+            <Button
+              variant="contained"
+              startIcon={<QrCodeScannerIcon />}
+              onClick={() => {
+                window.location.href = "/admin/qr-scan";
+                setMobileMenuOpen(false);
+              }}
+              fullWidth
+              size="medium"
+              sx={{
+                borderRadius: "50px",
+                textTransform: "none",
+                fontWeight: 700,
+                background: "linear-gradient(135deg, #27B1E4 0%, #0B568C 100%)",
+              }}
+            >
+              Scanner QR Code
+            </Button>
+          </Stack>
+        </Box>
+
+        {/* Section navigation */}
+        <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1, px: 1, color: theme.palette.primary.dark }}>
+          Navigation
+        </Typography>
+        {tabItems.map((item) => (
+          <ListItemButton
+            key={item.value}
+            selected={activeTab === item.value}
+            onClick={() => handleTabChange(item.value as AdminTab)}
+            sx={{
+              borderRadius: 2,
+              mb: 0.5,
+              backgroundColor: activeTab === item.value ? alpha(theme.palette.primary.main, 0.1) : "transparent",
+              "&:hover": {
+                backgroundColor: alpha(theme.palette.primary.main, 0.05),
+              },
+              "&.Mui-selected": {
+                backgroundColor: alpha(theme.palette.primary.main, 0.1),
+              },
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 40, color: activeTab === item.value ? theme.palette.primary.main : "inherit" }}>
+              {item.icon}
+            </ListItemIcon>
+            <ListItemText 
+              primary={item.label} 
+              primaryTypographyProps={{
+                fontWeight: activeTab === item.value ? 700 : 500,
+                color: activeTab === item.value ? theme.palette.primary.main : "inherit",
+              }}
+            />
+            {activeTab === item.value && (
+              <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: theme.palette.primary.main }} />
+            )}
+          </ListItemButton>
+        ))}
+      </List>
+
+      <Divider />
+
+      <Box sx={{ p: 3, backgroundColor: alpha(theme.palette.primary.light, 0.03) }}>
+        <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: "block", mb: 1 }}>
+          Section active :
+        </Typography>
+        <Chip
+          label={sectionLabel}
+          sx={{
+            backgroundColor: alpha(theme.palette.warning.main, 0.1),
+            color: theme.palette.warning.dark,
+            fontWeight: 700,
+          }}
+        />
+      </Box>
+    </Drawer>
+  );
+
   return (
     <Box
       sx={{
         height: "100vh",
         backgroundColor: alpha(theme.palette.primary.light, 0.02),
         position: "relative",
-        mt: 14,
+        mt: { xs: 8, sm: 10, md: 14 },
       }}
     >
       {/* HEADER FIXED */}
@@ -177,21 +360,23 @@ export default function AdminDashboard() {
           borderBottom: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
         }}
       >
-        <Box sx={{ px: { xs: 2, sm: 3, md: 4 }, py: { xs: 2, sm: 2.5 }, transition: "all 0.3s ease" }}>
+        <Box sx={{ px: { xs: 2, sm: 3, md: 4 }, py: { xs: 1.5, sm: 2, md: 2.5 }, transition: "all 0.3s ease" }}>
+          {/* En-tête principal */}
           <Box
             sx={{
               mb: 1.5,
               transition: "all 0.3s ease",
-              transform: isHeaderExpanded ? "none" : "scale(0.97)",
+              transform: isHeaderExpanded ? "none" : isMobile ? "scale(0.98)" : "scale(0.97)",
               opacity: isHeaderExpanded ? 1 : 0.9,
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, flexWrap: "wrap" }}>
+              {/* Logo et titre */}
               <Stack direction="row" alignItems="center" spacing={2}>
                 <Box
                   sx={{
-                    width: isHeaderExpanded ? 56 : 48,
-                    height: isHeaderExpanded ? 56 : 48,
+                    width: isHeaderExpanded ? { xs: 48, md: 56 } : { xs: 40, md: 48 },
+                    height: isHeaderExpanded ? { xs: 48, md: 56 } : { xs: 40, md: 48 },
                     borderRadius: isHeaderExpanded ? 3 : 2,
                     backgroundColor: alpha(theme.palette.primary.main, isHeaderExpanded ? 0.1 : 0.08),
                     display: "flex",
@@ -202,7 +387,7 @@ export default function AdminDashboard() {
                 >
                   <AdminPanelSettings
                     sx={{
-                      fontSize: isHeaderExpanded ? 32 : 26,
+                      fontSize: isHeaderExpanded ? { xs: 26, md: 32 } : { xs: 22, md: 26 },
                       color: theme.palette.primary.main,
                       transition: "all 0.3s ease",
                     }}
@@ -211,22 +396,27 @@ export default function AdminDashboard() {
 
                 <Box>
                   <Typography
-                    variant={isHeaderExpanded ? "h4" : "h5"}
-                    fontWeight={800}
+                    component="h1"
                     sx={{
                       color: theme.palette.primary.dark,
                       mb: isHeaderExpanded ? 0.5 : 0.25,
                       transition: "all 0.3s ease",
+                      fontSize: isHeaderExpanded 
+                        ? { xs: "1.25rem", sm: "1.5rem", md: "2.125rem" } 
+                        : { xs: "1.125rem", sm: "1.25rem", md: "1.5rem" },
+                      fontWeight: 800,
                     }}
                   >
                     Tableau de Bord Administrateur
                   </Typography>
                   <Typography
-                    variant={isHeaderExpanded ? "body1" : "body2"}
                     sx={{
                       color: theme.palette.text.secondary,
                       fontWeight: isHeaderExpanded ? 500 : 400,
                       transition: "all 0.3s ease",
+                      fontSize: isHeaderExpanded 
+                        ? { xs: "0.875rem", md: "1rem" } 
+                        : { xs: "0.75rem", md: "0.875rem" },
                     }}
                   >
                     Gestion système • Utilisateurs • PDV • Commandes • Rapports • Temps réel
@@ -234,106 +424,136 @@ export default function AdminDashboard() {
                 </Box>
               </Stack>
 
-              {/* Boutons header */}
-              <Box display="flex" gap={1.5} flexWrap="wrap">
-                {canCreate && (
+              {/* Boutons header - Desktop seulement */}
+              {!isMobile && (
+                <Box display="flex" gap={1.5} flexWrap="wrap">
+                  {canCreate && (
+                    <Button
+                      variant="contained"
+                      startIcon={createIcon}
+                      onClick={handleOpenCreateFromParent}
+                      size={isSmallMobile ? "small" : "medium"}
+                      sx={{
+                        borderRadius: "50px",
+                        textTransform: "none",
+                        fontWeight: 600,
+                        px: 4,
+                        py: 1.5,
+                        background: "linear-gradient(135deg, #0B568C 0%, #27B1E4 100%)",
+                        boxShadow: "0 8px 24px rgba(11, 86, 140, 0.4)",
+                        "&:hover": {
+                          background: "linear-gradient(135deg, #0A345F 0%, #0B568C 100%)",
+                          boxShadow: "0 12px 32px rgba(10, 52, 95, 0.6)",
+                          transform: "translateY(-2px)",
+                        },
+                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                      }}
+                    >
+                      {createLabel}
+                    </Button>
+                  )}
+
                   <Button
-                    variant="contained"
-                    startIcon={createIcon}
-                    onClick={handleOpenCreateFromParent}
-                    size={isMobile ? "small" : "medium"}
+                    variant="outlined"
+                    startIcon={<RefreshIcon />}
+                    onClick={handleRefreshFromParent}
+                    size={isSmallMobile ? "small" : "medium"}
+                    disabled={childLoading}
                     sx={{
                       borderRadius: "50px",
                       textTransform: "none",
                       fontWeight: 600,
-                      px: 4,
+                      borderWidth: 2,
+                      borderColor: "#0B568C",
+                      color: "#0B568C",
+                      px: 3,
                       py: 1.5,
-                      background: "linear-gradient(135deg, #0B568C 0%, #27B1E4 100%)",
-                      boxShadow: "0 8px 24px rgba(11, 86, 140, 0.4)",
                       "&:hover": {
-                        background: "linear-gradient(135deg, #0A345F 0%, #0B568C 100%)",
-                        boxShadow: "0 12px 32px rgba(10, 52, 95, 0.6)",
+                        borderWidth: 2,
+                        borderColor: "#0A345F",
+                        backgroundColor: alpha("#0B568C", 0.05),
                         transform: "translateY(-2px)",
                       },
                       transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                     }}
                   >
-                    {createLabel}
+                    {childLoading ? "Chargement..." : "Actualiser"}
                   </Button>
-                )}
 
-                <Button
-                  variant="outlined"
-                  startIcon={<RefreshIcon />}
-                  onClick={handleRefreshFromParent}
-                  size={isMobile ? "small" : "medium"}
-                  disabled={childLoading}
+                  <Button
+                    variant="contained"
+                    startIcon={<QrCodeScannerIcon />}
+                    onClick={() => (window.location.href = "/admin/qr-scan")}
+                    size={isSmallMobile ? "small" : "medium"}
+                    sx={{
+                      borderRadius: "50px",
+                      textTransform: "none",
+                      fontWeight: 700,
+                      px: 3,
+                      py: 1.5,
+                      background: "linear-gradient(135deg, #27B1E4 0%, #0B568C 100%)",
+                      boxShadow: "0 8px 24px rgba(11, 86, 140, 0.35)",
+                      "&:hover": { transform: "translateY(-2px)" },
+                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    }}
+                  >
+                    Scanner
+                  </Button>
+                </Box>
+              )}
+
+              {/* Menu hamburger pour mobile */}
+              {isMobile && (
+                <IconButton
+                  onClick={() => setMobileMenuOpen(true)}
                   sx={{
-                    borderRadius: "50px",
-                    textTransform: "none",
-                    fontWeight: 600,
-                    borderWidth: 2,
-                    borderColor: "#0B568C",
-                    color: "#0B568C",
-                    px: 3,
-                    py: 1.5,
+                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                    color: theme.palette.primary.main,
                     "&:hover": {
-                      borderWidth: 2,
-                      borderColor: "#0A345F",
-                      backgroundColor: alpha("#0B568C", 0.05),
-                      transform: "translateY(-2px)",
+                      backgroundColor: alpha(theme.palette.primary.main, 0.2),
                     },
-                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                   }}
                 >
-                  {childLoading ? "Chargement..." : "Actualiser"}
-                </Button>
+                  <MenuIcon />
+                </IconButton>
+              )}
+            </Box>
 
-                <Button
-                  variant="contained"
-                  startIcon={<QrCodeScannerIcon />}
-                  onClick={() => (window.location.href = "/admin/qr-scan")}
-                  size={isMobile ? "small" : "medium"}
-                  sx={{
-                    borderRadius: "50px",
-                    textTransform: "none",
-                    fontWeight: 700,
-                    px: 3,
-                    py: 1.5,
-                    background: "linear-gradient(135deg, #27B1E4 0%, #0B568C 100%)",
-                    boxShadow: "0 8px 24px rgba(11, 86, 140, 0.35)",
-                    "&:hover": { transform: "translateY(-2px)" },
-                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            {/* Tabs - Desktop seulement */}
+            {!isMobile && (
+              <Box sx={{ mt: 2 }}>
+                <Tabs
+                  value={activeTab}
+                  onChange={(_, v) => setActiveTab(v)}
+                  variant="scrollable"
+                  scrollButtons="auto"
+                  sx={{ 
+                    "& .MuiTab-root": { 
+                      textTransform: "none", 
+                      fontWeight: 800,
+                      minHeight: 48,
+                      fontSize: "0.9rem",
+                    },
+                    "& .MuiTab-root.Mui-selected": {
+                      color: theme.palette.primary.main,
+                    },
                   }}
                 >
-                  Scanner
-                </Button>
+                  <Tab value="overview" label="Aperçu" icon={<DashboardIcon />} iconPosition="start" />
+                  <Tab value="profile" label="Profil" icon={<PersonIcon />} iconPosition="start" />
+                  <Tab value="users" label="Utilisateurs" icon={<PeopleIcon />} iconPosition="start" />
+                  <Tab value="drivers" label="Chauffeurs" icon={<PersonAddIcon />} iconPosition="start" />
+                  <Tab value="agents" label="Agents" icon={<SupportAgentIcon />} iconPosition="start" />
+                  <Tab value="pdv" label="PDV" icon={<StoreIcon />} iconPosition="start" />
+                  <Tab value="realtime" label="Temps réel" icon={<BoltIcon />} iconPosition="start" />
+                  <Tab value="orders" label="Commandes" icon={<ReceiptLongIcon />} iconPosition="start" />
+                  <Tab value="driver_requests" label="Demandes livreur" icon={<PendingActionsIcon />} iconPosition="start" />
+                  <Tab value="reports" label="Rapports" icon={<QueryStatsIcon />} iconPosition="start" />
+                </Tabs>
               </Box>
-            </Box>
+            )}
 
-            {/* Tabs */}
-            <Box sx={{ mt: 2 }}>
-              <Tabs
-                value={activeTab}
-                onChange={(_, v) => setActiveTab(v)}
-                variant="scrollable"
-                scrollButtons="auto"
-                sx={{ "& .MuiTab-root": { textTransform: "none", fontWeight: 800 } }}
-              >
-                <Tab value="overview" label="Aperçu" icon={<DashboardIcon />} iconPosition="start" />
-                <Tab value="profile" label="Profil" icon={<PersonIcon />} iconPosition="start" />
-                <Tab value="users" label="Utilisateurs" icon={<PeopleIcon />} iconPosition="start" />
-                <Tab value="drivers" label="Chauffeurs" icon={<PersonAddIcon />} iconPosition="start" />
-                <Tab value="agents" label="Agents" icon={<SupportAgentIcon />} iconPosition="start" />
-                <Tab value="pdv" label="PDV" icon={<StoreIcon />} iconPosition="start" />
-                <Tab value="realtime" label="Temps réel" icon={<BoltIcon />} iconPosition="start" />
-                <Tab value="orders" label="Commandes" icon={<ReceiptLongIcon />} iconPosition="start" />
-                <Tab value="driver_requests" label="Demandes livreur" icon={<PendingActionsIcon />} iconPosition="start" />
-                <Tab value="reports" label="Rapports" icon={<QueryStatsIcon />} iconPosition="start" />
-              </Tabs>
-            </Box>
-
-            {isHeaderExpanded && (
+            {isHeaderExpanded && !isMobile && (
               <Stack direction="row" spacing={1.5} sx={{ flexWrap: "wrap", gap: 1.5, mt: 2 }}>
                 <Chip
                   icon={<DashboardIcon sx={{ fontSize: 16 }} />}
@@ -369,9 +589,30 @@ export default function AdminDashboard() {
                 />
               </Stack>
             )}
+
+            {/* Indicateur de section pour mobile */}
+            {isMobile && isHeaderExpanded && (
+              <Box sx={{ mt: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <Chip
+                  label={sectionLabel}
+                  size="small"
+                  sx={{
+                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                    color: theme.palette.primary.dark,
+                    fontWeight: 700,
+                  }}
+                />
+                <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                  {sectionLabel} • {new Date().toLocaleDateString('fr-FR')}
+                </Typography>
+              </Box>
+            )}
           </Box>
         </Box>
       </Box>
+
+      {/* Menu mobile */}
+      {renderMobileMenu()}
 
       {/* CONTENU SCROLLABLE */}
       <Box
@@ -468,6 +709,31 @@ export default function AdminDashboard() {
           }}
         >
           ↑
+        </Button>
+      )}
+
+      {/* Bouton flottant pour mobile */}
+      {isMobile && canCreate && (
+        <Button
+          variant="contained"
+          startIcon={createIcon}
+          onClick={handleOpenCreateFromParent}
+          sx={{
+            position: "fixed",
+            bottom: 24,
+            left: 24,
+            borderRadius: "50px",
+            textTransform: "none",
+            fontWeight: 700,
+            px: 3,
+            py: 1.5,
+            background: "linear-gradient(135deg, #0B568C 0%, #27B1E4 100%)",
+            boxShadow: "0 8px 24px rgba(11, 86, 140, 0.4)",
+            zIndex: 9998,
+            display: { xs: "flex", md: "none" },
+          }}
+        >
+          {createLabel}
         </Button>
       )}
     </Box>

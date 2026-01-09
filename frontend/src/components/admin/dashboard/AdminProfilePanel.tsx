@@ -28,6 +28,7 @@ import {
   MenuItem,
   IconButton,
   Badge,
+  useMediaQuery,
 } from "@mui/material";
 
 import {
@@ -143,6 +144,8 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
   ref
 ) {
   const theme = useTheme();
+  const isMobile = useMediaQuery("(max-width:600px)");
+  const isTablet = useMediaQuery("(max-width:900px)");
 
   // ✅ IMPORTANT: éviter le refetch infini causé par onLoadingChange inline du parent
   const onLoadingRef = useRef<Props["onLoadingChange"]>(onLoadingChange);
@@ -509,39 +512,44 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
       sx={{
         background: "linear-gradient(135deg, #E4F5FB 0%, #D1EBF5 100%)",
         minHeight: "calc(100vh - 240px)",
-        py: 4,
-        px: { xs: 2, md: 4 },
-        mt: 8,
+        py: { xs: 3, md: 4 },
+        px: { xs: 2, sm: 3, md: 4 },
+        mt: { xs: 4, md: 8 },
       }}
     >
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ mb: { xs: 2, md: 3 } }}>
         <Typography
-          variant="h4"
+          variant={isMobile ? "h5" : "h4"}
           sx={{
             fontWeight: 900,
             background: "linear-gradient(135deg, #0B568C 0%, #27B1E4 100%)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
+            fontSize: { xs: "1.5rem", md: "2.125rem" },
           }}
         >
           Profil Administrateur
         </Typography>
-        <Typography sx={{ color: "#335F7A", fontWeight: 600 }}>
+        <Typography sx={{ 
+          color: "#335F7A", 
+          fontWeight: 600,
+          fontSize: { xs: "0.875rem", md: "1rem" }
+        }}>
           Complète tes informations personnelles (KYC admin : vérifié automatiquement une fois le profil complet)
         </Typography>
       </Box>
 
       <Paper
         sx={{
-          p: 4,
+          p: { xs: 3, md: 4 },
           borderRadius: 3,
           boxShadow: "0 12px 40px rgba(10, 52, 95, 0.1)",
           border: "1px solid rgba(11, 86, 140, 0.1)",
           background: "linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)",
         }}
       >
-        <Box display="flex" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={2}>
-          <Stack direction="row" spacing={2} alignItems="center">
+        <Box display="flex" flexDirection={isMobile ? "column" : "row"} justifyContent="space-between" alignItems={isMobile ? "flex-start" : "flex-start"} flexWrap="wrap" gap={2}>
+          <Stack direction={isMobile ? "column" : "row"} spacing={2} alignItems={isMobile ? "flex-start" : "center"} width={isMobile ? "100%" : "auto"}>
             <Badge
               overlap="circular"
               anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
@@ -552,8 +560,8 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
                     sx={{
                       backgroundColor: "#0B568C",
                       color: "white",
-                      width: 36,
-                      height: 36,
+                      width: { xs: 30, md: 36 },
+                      height: { xs: 30, md: 36 },
                       '&:hover': { backgroundColor: "#0A345F" }
                     }}
                   >
@@ -565,60 +573,97 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
               <Avatar
                 src={photoUrl || undefined}
                 sx={{
-                  width: 72,
-                  height: 72,
+                  width: { xs: 60, md: 72 },
+                  height: { xs: 60, md: 72 },
                   bgcolor: photoUrl ? "transparent" : "white",
                   color: "#0B568C",
                   border: "2px solid rgba(11,86,140,0.15)",
                   boxShadow: "0 12px 30px rgba(11, 86, 140, 0.15)",
                   fontWeight: 900,
-                  fontSize: "1.6rem",
+                  fontSize: { xs: "1.4rem", md: "1.6rem" },
                 }}
               >
                 {photoUrl ? '' : initials}
               </Avatar>
             </Badge>
 
-            <Box>
-              <Typography sx={{ fontWeight: 900, color: "#1A4F75", fontSize: "1.25rem" }}>
+            <Box sx={{ flex: 1 }}>
+              <Typography sx={{ 
+                fontWeight: 900, 
+                color: "#1A4F75", 
+                fontSize: { xs: "1.1rem", md: "1.25rem" },
+                mb: 0.5 
+              }}>
                 {admin?.full_name || "Administrateur"}
               </Typography>
-              <Typography sx={{ color: "#487F9A", fontWeight: 800 }}>
+              <Typography sx={{ 
+                color: "#487F9A", 
+                fontWeight: 800,
+                fontSize: { xs: "0.875rem", md: "1rem" }
+              }}>
                 @{admin?.username || "admin"} • {displayRole}
               </Typography>
 
               <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: "wrap", gap: 1 }}>
                 <Chip
-                  icon={<AdminIcon />}
+                  icon={<AdminIcon sx={{ fontSize: 14 }} />}
                   label="Accès Admin"
-                  sx={{ fontWeight: 900, backgroundColor: alpha("#0B568C", 0.1), color: "#0B568C" }}
+                  size={isMobile ? "small" : "medium"}
+                  sx={{ 
+                    fontWeight: 900, 
+                    backgroundColor: alpha("#0B568C", 0.1), 
+                    color: "#0B568C",
+                    fontSize: { xs: "0.75rem", md: "0.875rem" }
+                  }}
                 />
                 <Chip
-                  icon={<SecurityIcon />}
+                  icon={<SecurityIcon sx={{ fontSize: 14 }} />}
                   label="Sécurité"
-                  sx={{ fontWeight: 900, backgroundColor: alpha("#27B1E4", 0.12), color: "#0B568C" }}
+                  size={isMobile ? "small" : "medium"}
+                  sx={{ 
+                    fontWeight: 900, 
+                    backgroundColor: alpha("#27B1E4", 0.12), 
+                    color: "#0B568C",
+                    fontSize: { xs: "0.75rem", md: "0.875rem" }
+                  }}
                 />
                 <Chip
-                  icon={<VerifiedUserIcon />}
+                  icon={<VerifiedUserIcon sx={{ fontSize: 14 }} />}
                   label={kycLabel}
-                  sx={{ fontWeight: 900, backgroundColor: kycColor.bg, color: kycColor.fg }}
+                  size={isMobile ? "small" : "medium"}
+                  sx={{ 
+                    fontWeight: 900, 
+                    backgroundColor: kycColor.bg, 
+                    color: kycColor.fg,
+                    fontSize: { xs: "0.75rem", md: "0.875rem" }
+                  }}
                 />
               </Stack>
             </Box>
           </Stack>
 
-          <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="flex-end" alignItems="center" gap={1}>
+          <Stack 
+            direction="row" 
+            spacing={1} 
+            flexWrap="wrap" 
+            justifyContent={isMobile ? "flex-start" : "flex-end"} 
+            alignItems="center" 
+            gap={1}
+            sx={{ mt: isMobile ? 2 : 0 }}
+          >
             {!editMode ? (
               <Button
                 variant="contained"
                 startIcon={<EditIcon />}
                 onClick={handleStartEdit}
                 disabled={loading || saving}
+                size={isMobile ? "small" : "medium"}
                 sx={{
                   borderRadius: "50px",
                   textTransform: "none",
                   fontWeight: 900,
-                  px: 3,
+                  px: { xs: 2, md: 3 },
+                  py: { xs: 1, md: 1.5 },
                   background: "linear-gradient(135deg, #0B568C 0%, #27B1E4 100%)",
                   boxShadow: "0 8px 24px rgba(11, 86, 140, 0.35)",
                   "&:hover": { transform: "translateY(-2px)" },
@@ -633,11 +678,13 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
                   startIcon={<SaveIcon />}
                   onClick={handleSave}
                   disabled={saving}
+                  size={isMobile ? "small" : "medium"}
                   sx={{
                     borderRadius: "50px",
                     textTransform: "none",
                     fontWeight: 900,
-                    px: 3,
+                    px: { xs: 2, md: 3 },
+                    py: { xs: 1, md: 1.5 },
                     background: "linear-gradient(135deg, #0B568C 0%, #27B1E4 100%)",
                     boxShadow: "0 8px 24px rgba(11, 86, 140, 0.35)",
                     "&:hover": { transform: "translateY(-2px)" },
@@ -651,6 +698,7 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
                   startIcon={<CloseIcon />}
                   onClick={handleCancelEdit}
                   disabled={saving}
+                  size={isMobile ? "small" : "medium"}
                   sx={{
                     borderRadius: "50px",
                     textTransform: "none",
@@ -658,7 +706,12 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
                     borderWidth: 2,
                     borderColor: alpha("#0B568C", 0.35),
                     color: "#0B568C",
-                    "&:hover": { borderWidth: 2, backgroundColor: alpha("#0B568C", 0.05) },
+                    px: { xs: 2, md: 3 },
+                    py: { xs: 1, md: 1.5 },
+                    "&:hover": { 
+                      borderWidth: 2, 
+                      backgroundColor: alpha("#0B568C", 0.05) 
+                    },
                   }}
                 >
                   Annuler
@@ -674,7 +727,7 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
           <Alert severity="info" sx={{ borderRadius: 2, mb: 2 }}>
             <Stack direction="row" spacing={1.5} alignItems="center">
               <CircularProgress size={18} />
-              <Typography fontWeight={900}>
+              <Typography fontWeight={900} sx={{ fontSize: { xs: "0.875rem", md: "1rem" } }}>
                 {saving ? "Enregistrement du profil…" : "Chargement du profil…"}
               </Typography>
             </Stack>
@@ -682,7 +735,7 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
         )}
 
         {!!missingFields.length && !editMode && (
-          <Alert severity="warning" sx={{ borderRadius: 2, mb: 2, fontWeight: 700 }}>
+          <Alert severity="warning" sx={{ borderRadius: 2, mb: 2, fontWeight: 700, fontSize: { xs: "0.875rem", md: "1rem" } }}>
             Profil incomplet. Merci de compléter : <b>{missingFields.join(", ")}</b>.
           </Alert>
         )}
@@ -699,12 +752,23 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-            gap: 2,
+            gridTemplateColumns: { 
+              xs: "1fr", 
+              md: "1fr 1fr" 
+            },
+            gap: { xs: 2, md: 3 },
           }}
         >
-          <Paper sx={{ p: 3, borderRadius: 3, border: "1px solid rgba(11,86,140,0.08)" }}>
-            <Typography fontWeight={900} sx={{ color: "#1A4F75", mb: 2 }}>
+          <Paper sx={{ 
+            p: { xs: 2, md: 3 }, 
+            borderRadius: 3, 
+            border: "1px solid rgba(11,86,140,0.08)" 
+          }}>
+            <Typography fontWeight={900} sx={{ 
+              color: "#1A4F75", 
+              mb: 2,
+              fontSize: { xs: "1rem", md: "1.125rem" }
+            }}>
               Informations personnelles
             </Typography>
 
@@ -712,17 +776,22 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
               {/* Section Photo de profil en mode édition */}
               {editMode && (
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle2" sx={{ color: "#335F7A", fontWeight: 700, mb: 1 }}>
+                  <Typography variant="subtitle2" sx={{ 
+                    color: "#335F7A", 
+                    fontWeight: 700, 
+                    mb: 1,
+                    fontSize: { xs: "0.875rem", md: "0.9rem" }
+                  }}>
                     Photo de profil
                   </Typography>
-                  <Stack direction="row" spacing={2} alignItems="center">
+                  <Stack direction={isMobile ? "column" : "row"} spacing={2} alignItems={isMobile ? "flex-start" : "center"}>
                     <Avatar
                       src={photoPreview || getPhotoUrl(admin?.photo) || undefined}
                       sx={{ width: 64, height: 64 }}
                     >
                       {initials}
                     </Avatar>
-                    <Stack spacing={1}>
+                    <Stack spacing={1} sx={{ width: isMobile ? "100%" : "auto" }}>
                       <Button
                         variant="outlined"
                         startIcon={<PhotoCameraIcon />}
@@ -735,6 +804,7 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
                           borderWidth: 2,
                           borderColor: "#0B568C",
                           color: "#0B568C",
+                          width: isMobile ? "100%" : "auto"
                         }}
                       >
                         Changer la photo
@@ -750,6 +820,7 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
                             textTransform: "none",
                             fontWeight: 600,
                             color: "#F44336",
+                            width: isMobile ? "100%" : "auto"
                           }}
                         >
                           Supprimer la photo
@@ -757,7 +828,12 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
                       )}
                     </Stack>
                   </Stack>
-                  <Typography variant="caption" sx={{ color: "#487F9A", display: "block", mt: 1 }}>
+                  <Typography variant="caption" sx={{ 
+                    color: "#487F9A", 
+                    display: "block", 
+                    mt: 1,
+                    fontSize: { xs: "0.75rem", md: "0.875rem" }
+                  }}>
                     Formats supportés: JPEG, PNG, GIF, WebP. Taille max: 5MB.
                   </Typography>
                 </Box>
@@ -769,7 +845,10 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
                 onChange={(e) => setForm((p) => ({ ...p, full_name: e.target.value }))}
                 disabled={!editMode}
                 fullWidth
-                InputProps={{ startAdornment: <BadgeIcon sx={{ mr: 1, color: "#0B568C" }} /> as any }}
+                size={isMobile ? "small" : "medium"}
+                InputProps={{ 
+                  startAdornment: <BadgeIcon sx={{ mr: 1, color: "#0B568C", fontSize: { xs: "1rem", md: "1.25rem" } }} /> as any 
+                }}
               />
 
               <TextField
@@ -778,7 +857,10 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
                 onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
                 disabled={!editMode}
                 fullWidth
-                InputProps={{ startAdornment: <PhoneIcon sx={{ mr: 1, color: "#0B568C" }} /> as any }}
+                size={isMobile ? "small" : "medium"}
+                InputProps={{ 
+                  startAdornment: <PhoneIcon sx={{ mr: 1, color: "#0B568C", fontSize: { xs: "1rem", md: "1.25rem" } }} /> as any 
+                }}
               />
 
               <TextField
@@ -788,7 +870,10 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
                 onChange={(e) => setForm((p) => ({ ...p, gender: e.target.value }))}
                 disabled={!editMode}
                 fullWidth
-                InputProps={{ startAdornment: <GenderIcon sx={{ mr: 1, color: "#0B568C" }} /> as any }}
+                size={isMobile ? "small" : "medium"}
+                InputProps={{ 
+                  startAdornment: <GenderIcon sx={{ mr: 1, color: "#0B568C", fontSize: { xs: "1rem", md: "1.25rem" } }} /> as any 
+                }}
               >
                 <MenuItem value="">— Sélectionner —</MenuItem>
                 <MenuItem value="male">Masculin</MenuItem>
@@ -803,8 +888,11 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
                 onChange={(e) => setForm((p) => ({ ...p, date_of_birth: e.target.value }))}
                 disabled={!editMode}
                 fullWidth
+                size={isMobile ? "small" : "medium"}
                 InputLabelProps={{ shrink: true }}
-                InputProps={{ startAdornment: <CalendarIcon sx={{ mr: 1, color: "#0B568C" }} /> as any }}
+                InputProps={{ 
+                  startAdornment: <CalendarIcon sx={{ mr: 1, color: "#0B568C", fontSize: { xs: "1rem", md: "1.25rem" } }} /> as any 
+                }}
               />
 
               <TextField
@@ -813,40 +901,66 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
                 onChange={(e) => setForm((p) => ({ ...p, nationality: e.target.value }))}
                 disabled={!editMode}
                 fullWidth
-                InputProps={{ startAdornment: <PublicIcon sx={{ mr: 1, color: "#0B568C" }} /> as any }}
+                size={isMobile ? "small" : "medium"}
+                InputProps={{ 
+                  startAdornment: <PublicIcon sx={{ mr: 1, color: "#0B568C", fontSize: { xs: "1rem", md: "1.25rem" } }} /> as any 
+                }}
               />
             </Stack>
           </Paper>
 
-          <Paper sx={{ p: 3, borderRadius: 3, border: "1px solid rgba(11,86,140,0.08)" }}>
-            <Typography fontWeight={900} sx={{ color: "#1A4F75", mb: 2 }}>
+          <Paper sx={{ 
+            p: { xs: 2, md: 3 }, 
+            borderRadius: 3, 
+            border: "1px solid rgba(11,86,140,0.08)" 
+          }}>
+            <Typography fontWeight={900} sx={{ 
+              color: "#1A4F75", 
+              mb: 2,
+              fontSize: { xs: "1rem", md: "1.125rem" }
+            }}>
               Compte & session
             </Typography>
 
             <Stack spacing={1.2}>
               <Stack direction="row" spacing={1} alignItems="center">
-                <EmailIcon sx={{ color: "#0B568C" }} />
-                <Typography fontWeight={800} sx={{ color: "#335F7A" }}>
+                <EmailIcon sx={{ color: "#0B568C", fontSize: { xs: "1rem", md: "1.25rem" } }} />
+                <Typography fontWeight={800} sx={{ 
+                  color: "#335F7A",
+                  fontSize: { xs: "0.875rem", md: "1rem" }
+                }}>
                   {admin?.email || "-"}
                 </Typography>
               </Stack>
 
               <Stack direction="row" spacing={1} alignItems="center">
-                <PersonIcon sx={{ color: "#0B568C" }} />
-                <Typography fontWeight={800} sx={{ color: "#335F7A" }}>
+                <PersonIcon sx={{ color: "#0B568C", fontSize: { xs: "1rem", md: "1.25rem" } }} />
+                <Typography fontWeight={800} sx={{ 
+                  color: "#335F7A",
+                  fontSize: { xs: "0.875rem", md: "1rem" }
+                }}>
                   Rôle: {displayRole}
                 </Typography>
               </Stack>
 
-              <Typography sx={{ color: "#335F7A", fontWeight: 800, mt: 1 }}>
+              <Typography sx={{ 
+                color: "#335F7A", 
+                fontWeight: 800, 
+                mt: 1,
+                fontSize: { xs: "0.875rem", md: "1rem" }
+              }}>
                 Dernière connexion:{" "}
                 <Box component="span" sx={{ color: "#487F9A" }}>
                   {admin?.last_login_at ? toFrDateTime(admin.last_login_at) : "-"}
                 </Box>
               </Typography>
 
-              <Alert severity="info" sx={{ borderRadius: 2, mt: 2 }}>
-                <Typography fontWeight={800}>
+              <Alert severity="info" sx={{ 
+                borderRadius: 2, 
+                mt: 2,
+                fontSize: { xs: "0.875rem", md: "1rem" }
+              }}>
+                <Typography fontWeight={800} sx={{ fontSize: "inherit" }}>
                   Conseil : complète ton profil pour activer automatiquement le badge KYC Admin.
                 </Typography>
               </Alert>
@@ -859,12 +973,19 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
         open={snack.open}
         autoHideDuration={4500}
         onClose={() => setSnack((p) => ({ ...p, open: false }))}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: isMobile ? "center" : "right" }}
+        sx={{ 
+          bottom: { xs: 90, md: 24 } // Éviter le bouton flottant sur mobile
+        }}
       >
         <Alert
           onClose={() => setSnack((p) => ({ ...p, open: false }))}
           severity={snack.severity}
-          sx={{ borderRadius: 3, fontWeight: 900 }}
+          sx={{ 
+            borderRadius: 3, 
+            fontWeight: 900,
+            fontSize: { xs: "0.875rem", md: "1rem" }
+          }}
         >
           {snack.msg}
         </Alert>

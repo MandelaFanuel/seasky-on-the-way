@@ -120,6 +120,7 @@ const StatCard = ({
   onClick?: () => void;
 }) => {
   const theme = useTheme();
+  const isMobile = useMediaQuery("(max-width:600px)");
 
   return (
     <Card
@@ -141,14 +142,14 @@ const StatCard = ({
       }}
       onClick={onClick}
     >
-      <CardContent sx={{ p: 3, position: "relative" }}>
+      <CardContent sx={{ p: { xs: 2, md: 3 }, position: "relative" }}>
         <Box
           sx={{
             position: "absolute",
             top: 0,
             right: 0,
-            width: "60px",
-            height: "60px",
+            width: { xs: "50px", md: "60px" },
+            height: { xs: "50px", md: "60px" },
             background: `linear-gradient(135deg, ${alpha(color, 0.1)} 0%, ${alpha(
               color,
               0.05
@@ -165,7 +166,7 @@ const StatCard = ({
                 textTransform: "uppercase",
                 fontWeight: 600,
                 letterSpacing: 1,
-                fontSize: "0.7rem",
+                fontSize: { xs: "0.65rem", md: "0.7rem" },
                 display: "block",
                 mb: 1,
                 color: "#335F7A",
@@ -183,7 +184,7 @@ const StatCard = ({
               sx={{
                 mb: 0.5,
                 fontWeight: 900,
-                fontSize: "2.5rem",
+                fontSize: { xs: "2rem", md: "2.5rem" },
                 background: "linear-gradient(135deg, #0B568C 0%, #27B1E4 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
@@ -197,7 +198,7 @@ const StatCard = ({
                 variant="caption"
                 sx={{
                   display: "block",
-                  fontSize: "0.75rem",
+                  fontSize: { xs: "0.7rem", md: "0.75rem" },
                   color: "#487F9A",
                   fontWeight: 500,
                 }}
@@ -208,23 +209,23 @@ const StatCard = ({
           </Box>
           <Box
             sx={{
-              width: 56,
-              height: 56,
+              width: { xs: 48, md: 56 },
+              height: { xs: 48, md: 56 },
               borderRadius: 2,
               background: `linear-gradient(135deg, ${color} 0%, ${alpha(color, 0.8)} 100%)`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               boxShadow: `0 8px 24px ${alpha(color, 0.3)}`,
-              ml: 2,
+              ml: { xs: 1, md: 2 },
             }}
           >
-            <Box sx={{ color: "white" }}>{icon}</Box>
+            <Box sx={{ color: "white", fontSize: { xs: "1.5rem", md: "1.75rem" } }}>{icon}</Box>
           </Box>
         </Box>
 
         {trend && trend !== "neutral" && (
-          <Box display="flex" alignItems="center" sx={{ mt: 3 }}>
+          <Box display="flex" alignItems="center" sx={{ mt: { xs: 2, md: 3 } }}>
             <Box
               sx={{
                 display: "flex",
@@ -248,6 +249,7 @@ const StatCard = ({
               variant="caption"
               fontWeight={700}
               color={trend === "up" ? "#4CAF50" : "#F44336"}
+              sx={{ fontSize: { xs: "0.7rem", md: "0.75rem" } }}
             >
               {trend === "up" ? "+12%" : "-5%"} ce mois
             </Typography>
@@ -304,6 +306,7 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
 ) {
   const theme = useTheme();
   const isMobile = useMediaQuery("(max-width:600px)");
+  const isTablet = useMediaQuery("(max-width:900px)");
 
   const onLoadingRef = useRef<Props["onLoadingChange"]>(onLoadingChange);
   useEffect(() => {
@@ -472,19 +475,19 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
       sx={{
         background: "linear-gradient(135deg, #E4F5FB 0%, #D1EBF5 100%)",
         minHeight: "100vh",
-        marginTop: 8,
-        py: 4,
-        px: { xs: 2, md: 4 },
+        marginTop: { xs: 4, md: 8 },
+        py: { xs: 3, md: 4 },
+        px: { xs: 2, sm: 3, md: 4 },
       }}
     >
       {/* Header du Dashboard */}
-      <Box sx={{ mb: 6 }}>
-        <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={3}>
-          <Box display="flex" alignItems="center" gap={3}>
+      <Box sx={{ mb: { xs: 4, md: 6 } }}>
+        <Box display="flex" flexDirection={isMobile ? "column" : "row"} alignItems={isMobile ? "flex-start" : "center"} justifyContent="space-between" flexWrap="wrap" gap={3}>
+          <Box display="flex" alignItems="center" gap={3} flexDirection={isMobile ? "column" : "row"} width={isMobile ? "100%" : "auto"}>
             <Box
               sx={{
-                width: 80,
-                height: 80,
+                width: { xs: 60, md: 80 },
+                height: { xs: 60, md: 80 },
                 borderRadius: 3,
                 backgroundColor: "white",
                 display: "flex",
@@ -494,14 +497,14 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                 border: "1px solid rgba(11, 86, 140, 0.1)",
               }}
             >
-              <AdminPanelSettingsIcon sx={{ fontSize: 44, color: "#0B568C" }} />
+              <AdminPanelSettingsIcon sx={{ fontSize: { xs: 32, md: 44 }, color: "#0B568C" }} />
             </Box>
-            <Box>
+            <Box sx={{ textAlign: isMobile ? "center" : "left" }}>
               <Typography
                 variant="h1"
                 sx={{
                   color: "#1A4F75",
-                  fontSize: { xs: "2rem", sm: "2.5rem", md: "3rem" },
+                  fontSize: { xs: "1.75rem", sm: "2rem", md: "3rem" },
                   fontWeight: 900,
                   lineHeight: 1.1,
                   mb: 1.5,
@@ -518,7 +521,7 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                 sx={{
                   color: "#335F7A",
                   fontWeight: 400,
-                  fontSize: { xs: "1rem", md: "1.25rem" },
+                  fontSize: { xs: "0.9rem", md: "1.25rem" },
                   maxWidth: "600px",
                 }}
               >
@@ -530,12 +533,17 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
       </Box>
 
       {/* Cartes de statistiques */}
-      <Box sx={{ mb: 6 }}>
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+      <Box sx={{ mb: { xs: 4, md: 6 } }}>
+        <Box sx={{ 
+          display: "flex", 
+          flexWrap: "wrap", 
+          gap: { xs: 2, md: 3 },
+          justifyContent: { xs: "center", sm: "flex-start" }
+        }}>
           <Box
             sx={{
-              flex: "1 1 220px",
-              minWidth: "220px",
+              flex: { xs: "1 1 100%", sm: "1 1 calc(50% - 12px)", md: "1 1 220px" },
+              minWidth: { xs: "100%", sm: "calc(50% - 12px)", md: "220px" },
               maxWidth: { xs: "100%", sm: "calc(50% - 12px)", md: "calc(25% - 12px)" },
             }}
           >
@@ -551,8 +559,8 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
 
           <Box
             sx={{
-              flex: "1 1 220px",
-              minWidth: "220px",
+              flex: { xs: "1 1 100%", sm: "1 1 calc(50% - 12px)", md: "1 1 220px" },
+              minWidth: { xs: "100%", sm: "calc(50% - 12px)", md: "220px" },
               maxWidth: { xs: "100%", sm: "calc(50% - 12px)", md: "calc(25% - 12px)" },
             }}
           >
@@ -568,8 +576,8 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
 
           <Box
             sx={{
-              flex: "1 1 220px",
-              minWidth: "220px",
+              flex: { xs: "1 1 100%", sm: "1 1 calc(50% - 12px)", md: "1 1 220px" },
+              minWidth: { xs: "100%", sm: "calc(50% - 12px)", md: "220px" },
               maxWidth: { xs: "100%", sm: "calc(50% - 12px)", md: "calc(25% - 12px)" },
             }}
           >
@@ -585,8 +593,8 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
 
           <Box
             sx={{
-              flex: "1 1 220px",
-              minWidth: "220px",
+              flex: { xs: "1 1 100%", sm: "1 1 calc(50% - 12px)", md: "1 1 220px" },
+              minWidth: { xs: "100%", sm: "calc(50% - 12px)", md: "220px" },
               maxWidth: { xs: "100%", sm: "calc(50% - 12px)", md: "calc(25% - 12px)" },
             }}
           >
@@ -605,8 +613,8 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
       {/* Section Filtres */}
       <Paper
         sx={{
-          p: 4,
-          mb: 6,
+          p: { xs: 3, md: 4 },
+          mb: { xs: 4, md: 6 },
           borderRadius: 3,
           boxShadow: "0 12px 40px rgba(10, 52, 95, 0.1)",
           border: "1px solid rgba(11, 86, 140, 0.1)",
@@ -630,7 +638,7 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
             mb: 3,
             color: "#1A4F75",
             fontWeight: 800,
-            fontSize: "1.5rem",
+            fontSize: { xs: "1.25rem", md: "1.5rem" },
           }}
         >
           Recherche & Filtres
@@ -653,7 +661,7 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                 setPage(0);
                 setSearch(e.target.value);
               }}
-              size="medium"
+              size={isMobile ? "small" : "medium"}
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: 3,
@@ -687,9 +695,10 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
               flexWrap: "wrap",
               gap: 2,
               flex: { xs: "1 1 auto", md: "0 0 auto" },
+              width: { xs: "100%", md: "auto" },
             }}
           >
-            <FormControl size="medium" sx={{ minWidth: 160 }}>
+            <FormControl size={isMobile ? "small" : "medium"} sx={{ minWidth: { xs: "100%", sm: 160 } }}>
               <InputLabel sx={{ fontWeight: 600, color: "#335F7A" }}>Statut</InputLabel>
               <Select
                 value={statusFilter}
@@ -721,7 +730,7 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                 setSearch("");
                 setStatusFilter("all");
               }}
-              size="medium"
+              size={isMobile ? "small" : "medium"}
               sx={{
                 borderRadius: "50px",
                 textTransform: "none",
@@ -729,8 +738,9 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                 borderWidth: 2,
                 borderColor: "#335F7A",
                 color: "#335F7A",
-                px: 3,
-                py: 1.5,
+                px: { xs: 2, md: 3 },
+                py: { xs: 1, md: 1.5 },
+                width: { xs: "100%", sm: "auto" },
                 "&:hover": {
                   borderColor: "#1A4F75",
                   backgroundColor: alpha("#335F7A", 0.05),
@@ -752,25 +762,35 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
           boxShadow: "0 12px 40px rgba(10, 52, 95, 0.1)",
           border: "1px solid rgba(11, 86, 140, 0.1)",
           background: "linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)",
+          overflowX: "auto",
         }}
       >
         <Box
           sx={{
-            p: 4,
+            p: { xs: 3, md: 4 },
             borderBottom: "1px solid rgba(11, 86, 140, 0.1)",
             background: "linear-gradient(135deg, rgba(11, 86, 140, 0.05) 0%, rgba(11, 86, 140, 0.02) 100%)",
           }}
         >
-          <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
+          <Box display="flex" flexDirection={isMobile ? "column" : "row"} alignItems={isMobile ? "flex-start" : "center"} justifyContent="space-between" flexWrap="wrap" gap={2}>
             <Box>
-              <Typography variant="h5" sx={{ color: "#1A4F75", fontWeight: 800, fontSize: "1.5rem", mb: 1 }}>
+              <Typography variant="h5" sx={{ 
+                color: "#1A4F75", 
+                fontWeight: 800, 
+                fontSize: { xs: "1.1rem", md: "1.5rem" }, 
+                mb: 1 
+              }}>
                 Liste des Utilisateurs
               </Typography>
-              <Typography variant="body1" sx={{ color: "#335F7A", fontWeight: 400 }}>
+              <Typography variant="body1" sx={{ 
+                color: "#335F7A", 
+                fontWeight: 400,
+                fontSize: { xs: "0.875rem", md: "1rem" }
+              }}>
                 Gérez et supervisez tous les comptes utilisateurs de la plateforme
               </Typography>
             </Box>
-            <Box display="flex" alignItems="center" gap={2}>
+            <Box display="flex" alignItems="center" gap={2} mt={isMobile ? 1 : 0}>
               <Typography
                 variant="body2"
                 sx={{
@@ -780,6 +800,7 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                   px: 2,
                   py: 0.5,
                   borderRadius: 2,
+                  fontSize: { xs: "0.75rem", md: "0.875rem" }
                 }}
               >
                 {rows.length} utilisateur(s) affiché(s)
@@ -789,8 +810,8 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
           </Box>
         </Box>
 
-        <Box sx={{ overflowX: "auto" }}>
-          <Table>
+        <Box sx={{ overflowX: "auto", minHeight: 400 }}>
+          <Table sx={{ minWidth: isMobile ? 800 : "auto" }}>
             <TableHead>
               <TableRow
                 sx={{
@@ -798,25 +819,74 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                   borderBottom: "2px solid rgba(11, 86, 140, 0.1)",
                 }}
               >
-                <TableCell sx={{ fontWeight: 800, py: 3, fontSize: "0.95rem", color: "#1A4F75", borderBottom: "none" }}>
+                <TableCell sx={{ 
+                  fontWeight: 800, 
+                  py: { xs: 2, md: 3 }, 
+                  fontSize: { xs: "0.85rem", md: "0.95rem" }, 
+                  color: "#1A4F75", 
+                  borderBottom: "none",
+                  minWidth: 180 
+                }}>
                   Utilisateur
                 </TableCell>
-                <TableCell sx={{ fontWeight: 800, py: 3, fontSize: "0.95rem", color: "#1A4F75", borderBottom: "none" }}>
+                <TableCell sx={{ 
+                  fontWeight: 800, 
+                  py: { xs: 2, md: 3 }, 
+                  fontSize: { xs: "0.85rem", md: "0.95rem" }, 
+                  color: "#1A4F75", 
+                  borderBottom: "none",
+                  minWidth: 180 
+                }}>
                   Contact
                 </TableCell>
-                <TableCell sx={{ fontWeight: 800, py: 3, fontSize: "0.95rem", color: "#1A4F75", borderBottom: "none" }}>
+                <TableCell sx={{ 
+                  fontWeight: 800, 
+                  py: { xs: 2, md: 3 }, 
+                  fontSize: { xs: "0.85rem", md: "0.95rem" }, 
+                  color: "#1A4F75", 
+                  borderBottom: "none",
+                  minWidth: 140 
+                }}>
                   Type de Compte
                 </TableCell>
-                <TableCell sx={{ fontWeight: 800, py: 3, fontSize: "0.95rem", color: "#1A4F75", borderBottom: "none" }}>
+                <TableCell sx={{ 
+                  fontWeight: 800, 
+                  py: { xs: 2, md: 3 }, 
+                  fontSize: { xs: "0.85rem", md: "0.95rem" }, 
+                  color: "#1A4F75", 
+                  borderBottom: "none",
+                  minWidth: 120 
+                }}>
                   Statut
                 </TableCell>
-                <TableCell sx={{ fontWeight: 800, py: 3, fontSize: "0.95rem", color: "#1A4F75", borderBottom: "none" }}>
+                <TableCell sx={{ 
+                  fontWeight: 800, 
+                  py: { xs: 2, md: 3 }, 
+                  fontSize: { xs: "0.85rem", md: "0.95rem" }, 
+                  color: "#1A4F75", 
+                  borderBottom: "none",
+                  minWidth: 120 
+                }}>
                   KYC
                 </TableCell>
-                <TableCell sx={{ fontWeight: 800, py: 3, fontSize: "0.95rem", color: "#1A4F75", borderBottom: "none" }}>
+                <TableCell sx={{ 
+                  fontWeight: 800, 
+                  py: { xs: 2, md: 3 }, 
+                  fontSize: { xs: "0.85rem", md: "0.95rem" }, 
+                  color: "#1A4F75", 
+                  borderBottom: "none",
+                  minWidth: 120 
+                }}>
                   Création
                 </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 800, py: 3, fontSize: "0.95rem", color: "#1A4F75", borderBottom: "none" }}>
+                <TableCell align="right" sx={{ 
+                  fontWeight: 800, 
+                  py: { xs: 2, md: 3 }, 
+                  fontSize: { xs: "0.85rem", md: "0.95rem" }, 
+                  color: "#1A4F75", 
+                  borderBottom: "none",
+                  minWidth: 150 
+                }}>
                   Actions
                 </TableCell>
               </TableRow>
@@ -855,16 +925,16 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                       borderBottom: "1px solid rgba(11, 86, 140, 0.05)",
                     }}
                   >
-                    <TableCell sx={{ py: 2.5 }}>
+                    <TableCell sx={{ py: { xs: 1.5, md: 2.5 } }}>
                       <Box display="flex" alignItems="center" gap={2}>
                         <Avatar
                           sx={{
-                            width: 48,
-                            height: 48,
+                            width: { xs: 40, md: 48 },
+                            height: { xs: 40, md: 48 },
                             bgcolor: "white",
                             color: "#0B568C",
                             fontWeight: 700,
-                            fontSize: "1.2rem",
+                            fontSize: { xs: "1rem", md: "1.2rem" },
                             boxShadow: "0 8px 24px rgba(11, 86, 140, 0.15)",
                             border: "2px solid rgba(11, 86, 140, 0.1)",
                           }}
@@ -872,7 +942,11 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                           {initials(u.full_name || u.username)}
                         </Avatar>
                         <Box>
-                          <Typography variant="subtitle1" sx={{ color: "#1A4F75", fontSize: "1rem", fontWeight: 700 }}>
+                          <Typography variant="subtitle1" sx={{ 
+                            color: "#1A4F75", 
+                            fontSize: { xs: "0.9rem", md: "1rem" }, 
+                            fontWeight: 700 
+                          }}>
                             {u.full_name || u.username || "-"}
                           </Typography>
                           <Typography
@@ -885,7 +959,7 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                               borderRadius: 1,
                               display: "inline-block",
                               fontWeight: 600,
-                              fontSize: "0.7rem",
+                              fontSize: { xs: "0.65rem", md: "0.7rem" },
                             }}
                           >
                             @{u.username}
@@ -894,18 +968,26 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                       </Box>
                     </TableCell>
 
-                    <TableCell sx={{ py: 2.5 }}>
+                    <TableCell sx={{ py: { xs: 1.5, md: 2.5 } }}>
                       <Stack spacing={1.5}>
                         {u.email && (
                           <Box display="flex" alignItems="center" gap={1}>
-                            <Typography variant="body2" sx={{ fontWeight: 600, color: "#335F7A" }}>
+                            <Typography variant="body2" sx={{ 
+                              fontWeight: 600, 
+                              color: "#335F7A",
+                              fontSize: { xs: "0.8rem", md: "0.875rem" }
+                            }}>
                               {u.email}
                             </Typography>
                           </Box>
                         )}
                         {u.phone && (
                           <Box display="flex" alignItems="center" gap={1}>
-                            <Typography variant="caption" sx={{ color: "#487F9A", fontWeight: 500 }}>
+                            <Typography variant="caption" sx={{ 
+                              color: "#487F9A", 
+                              fontWeight: 500,
+                              fontSize: { xs: "0.75rem", md: "0.875rem" }
+                            }}>
                               {u.phone}
                             </Typography>
                           </Box>
@@ -913,7 +995,7 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                       </Stack>
                     </TableCell>
 
-                    <TableCell sx={{ py: 2.5 }}>
+                    <TableCell sx={{ py: { xs: 1.5, md: 2.5 } }}>
                       <Box
                         sx={{
                           display: "inline-flex",
@@ -931,7 +1013,7 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                           sx={{
                             color: "#0B568C",
                             fontWeight: 700,
-                            fontSize: "0.75rem",
+                            fontSize: { xs: "0.7rem", md: "0.75rem" },
                             textTransform: "capitalize",
                           }}
                         >
@@ -940,7 +1022,7 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                       </Box>
                     </TableCell>
 
-                    <TableCell sx={{ py: 2.5 }}>
+                    <TableCell sx={{ py: { xs: 1.5, md: 2.5 } }}>
                       <Box
                         sx={{
                           display: "inline-flex",
@@ -961,7 +1043,7 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                           sx={{
                             color: statusConfig.color,
                             fontWeight: 700,
-                            fontSize: "0.75rem",
+                            fontSize: { xs: "0.7rem", md: "0.75rem" },
                             textTransform: "uppercase",
                             letterSpacing: 0.5,
                           }}
@@ -971,7 +1053,7 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                       </Box>
                     </TableCell>
 
-                    <TableCell sx={{ py: 2.5 }}>
+                    <TableCell sx={{ py: { xs: 1.5, md: 2.5 } }}>
                       <Box
                         sx={{
                           display: "inline-flex",
@@ -992,7 +1074,7 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                           sx={{
                             color: config.color,
                             fontWeight: 700,
-                            fontSize: "0.75rem",
+                            fontSize: { xs: "0.7rem", md: "0.75rem" },
                           }}
                         >
                           {config.label}
@@ -1000,13 +1082,14 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                       </Box>
                     </TableCell>
 
-                    <TableCell sx={{ py: 2.5 }}>
+                    <TableCell sx={{ py: { xs: 1.5, md: 2.5 } }}>
                       <Typography
                         variant="caption"
                         sx={{
                           color: "#487F9A",
                           fontWeight: 600,
                           display: "block",
+                          fontSize: { xs: "0.75rem", md: "0.875rem" }
                         }}
                       >
                         {u.created_at ? new Date(u.created_at).toLocaleDateString("fr-FR") : "-"}
@@ -1017,14 +1100,15 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                           color: "#335F7A",
                           fontWeight: 500,
                           display: "block",
+                          fontSize: { xs: "0.7rem", md: "0.875rem" }
                         }}
                       >
                         {u.created_at ? new Date(u.created_at).toLocaleTimeString("fr-FR", { hour: '2-digit', minute: '2-digit' }) : ""}
                       </Typography>
                     </TableCell>
 
-                    <TableCell align="right" sx={{ py: 2.5 }}>
-                      <Stack direction="row" spacing={1} justifyContent="flex-end">
+                    <TableCell align="right" sx={{ py: { xs: 1.5, md: 2.5 } }}>
+                      <Stack direction="row" spacing={1} justifyContent="flex-end" flexWrap="wrap">
                         <Tooltip title="Voir documents KYC">
                           <Button
                             size="small"
@@ -1035,11 +1119,12 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                               textTransform: "none",
                               borderRadius: "50px",
                               fontWeight: 600,
-                              px: 2,
+                              px: { xs: 1, md: 2 },
                               py: 0.5,
                               borderWidth: 2,
                               borderColor: "#0B568C",
                               color: "#0B568C",
+                              fontSize: { xs: "0.75rem", md: "0.875rem" },
                               "&:hover": {
                                 borderWidth: 2,
                                 borderColor: "#0A345F",
@@ -1064,12 +1149,13 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                                 textTransform: "none",
                                 borderRadius: "50px",
                                 fontWeight: 600,
-                                px: 2,
+                                px: { xs: 1, md: 2 },
                                 py: 0.5,
                                 background: isVerified
                                   ? alpha("#4CAF50", 0.5)
                                   : "linear-gradient(135deg, #27B1E4 0%, #0B568C 100%)",
                                 boxShadow: "0 8px 24px rgba(11, 86, 140, 0.3)",
+                                fontSize: { xs: "0.75rem", md: "0.875rem" },
                                 "&:hover": {
                                   background: isVerified
                                     ? alpha("#4CAF50", 0.5)
@@ -1094,11 +1180,23 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                 <TableRow>
                   <TableCell colSpan={7} sx={{ py: 8 }}>
                     <Box sx={{ textAlign: "center", py: 6, px: 2 }}>
-                      <PeopleIcon sx={{ fontSize: 80, opacity: 0.2, mb: 3, color: "#0B568C" }} />
-                      <Typography variant="h5" sx={{ color: "#1A4F75", mb: 2, fontWeight: 800, fontSize: "1.75rem" }}>
+                      <PeopleIcon sx={{ fontSize: { xs: 60, md: 80 }, opacity: 0.2, mb: 3, color: "#0B568C" }} />
+                      <Typography variant="h5" sx={{ 
+                        color: "#1A4F75", 
+                        mb: 2, 
+                        fontWeight: 800, 
+                        fontSize: { xs: "1.25rem", md: "1.75rem" } 
+                      }}>
                         Aucun utilisateur trouvé
                       </Typography>
-                      <Typography variant="body1" sx={{ color: "#487F9A", mb: 4, maxWidth: 500, mx: "auto", fontWeight: 400, fontSize: "1rem" }}>
+                      <Typography variant="body1" sx={{ 
+                        color: "#487F9A", 
+                        mb: 4, 
+                        maxWidth: 500, 
+                        mx: "auto", 
+                        fontWeight: 400, 
+                        fontSize: { xs: "0.875rem", md: "1rem" } 
+                      }}>
                         Ajustez vos filtres de recherche pour afficher des utilisateurs
                       </Typography>
                     </Box>
@@ -1126,8 +1224,17 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
             sx={{
               borderTop: "1px solid rgba(11, 86, 140, 0.1)",
               background: "linear-gradient(135deg, rgba(11, 86, 140, 0.02) 0%, transparent 100%)",
-              "& .MuiTablePagination-toolbar": { minHeight: 68, px: 3 },
-              "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontWeight: 600, color: "#335F7A" },
+              "& .MuiTablePagination-toolbar": { 
+                minHeight: 68, 
+                px: { xs: 2, md: 3 },
+                flexDirection: { xs: "column", sm: "row" },
+                alignItems: { xs: "flex-start", sm: "center" }
+              },
+              "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { 
+                fontWeight: 600, 
+                color: "#335F7A",
+                fontSize: { xs: "0.875rem", md: "1rem" }
+              },
               "& .MuiTablePagination-actions button": {
                 color: "#0B568C",
                 "&:hover": { backgroundColor: alpha("#0B568C", 0.1) },
@@ -1138,7 +1245,7 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
       </Paper>
 
       {/* Dialog des documents KYC */}
-      <Dialog open={docsOpen} onClose={() => setDocsOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={docsOpen} onClose={() => setDocsOpen(false)} maxWidth="md" fullWidth fullScreen={isMobile}>
         <DialogTitle
           sx={{
             fontWeight: 900,
@@ -1147,13 +1254,14 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
             alignItems: "center",
             justifyContent: "space-between",
             gap: 2,
+            p: { xs: 2, md: 3 },
           }}
         >
           <Stack direction="row" spacing={1.2} alignItems="center">
             <Box
               sx={{
-                width: 44,
-                height: 44,
+                width: { xs: 36, md: 44 },
+                height: { xs: 36, md: 44 },
                 borderRadius: 2,
                 display: "flex",
                 alignItems: "center",
@@ -1162,32 +1270,40 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                 border: `1px solid ${alpha("#0B568C", 0.18)}`,
               }}
             >
-              <DescriptionIcon sx={{ color: "#0B568C" }} />
+              <DescriptionIcon sx={{ color: "#0B568C", fontSize: { xs: "1rem", md: "1.25rem" } }} />
             </Box>
             <Box>
-              <Typography sx={{ fontWeight: 900, color: "#1A4F75" }}>
+              <Typography sx={{ 
+                fontWeight: 900, 
+                color: "#1A4F75",
+                fontSize: { xs: "1rem", md: "1.25rem" }
+              }}>
                 Documents KYC/KYB
               </Typography>
-              <Typography variant="caption" sx={{ color: "#487F9A", fontWeight: 700 }}>
+              <Typography variant="caption" sx={{ 
+                color: "#487F9A", 
+                fontWeight: 700,
+                fontSize: { xs: "0.75rem", md: "0.875rem" }
+              }}>
                 {docsUser?.full_name || docsUser?.username || "Utilisateur"}
               </Typography>
             </Box>
           </Stack>
-          <IconButton onClick={() => setDocsOpen(false)}>
+          <IconButton onClick={() => setDocsOpen(false)} size={isMobile ? "small" : "medium"}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
 
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ p: { xs: 2, md: 3 } }}>
           {docsLoading ? (
             <Stack direction="row" spacing={1.5} alignItems="center" sx={{ py: 2 }}>
               <CircularProgress size={18} sx={{ color: "#0B568C" }} />
-              <Typography variant="body2" sx={{ color: "#335F7A" }}>
+              <Typography variant="body2" sx={{ color: "#335F7A", fontSize: { xs: "0.875rem", md: "1rem" } }}>
                 Chargement des documents...
               </Typography>
             </Stack>
           ) : docs.length === 0 ? (
-            <Typography variant="body2" sx={{ color: "#487F9A" }}>
+            <Typography variant="body2" sx={{ color: "#487F9A", fontSize: { xs: "0.875rem", md: "1rem" } }}>
               Aucun document trouvé (ou endpoint manquant).
             </Typography>
           ) : (
@@ -1198,7 +1314,7 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                   <Paper
                     key={d.id}
                     sx={{
-                      p: 2,
+                      p: { xs: 1.5, md: 2 },
                       borderRadius: 2,
                       border: `1px solid ${alpha("#0B568C", 0.12)}`,
                       background: alpha("#0B568C", 0.02),
@@ -1211,10 +1327,16 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                       justifyContent="space-between"
                     >
                       <Box>
-                        <Typography fontWeight={900} sx={{ color: "#1A4F75" }}>
+                        <Typography fontWeight={900} sx={{ 
+                          color: "#1A4F75",
+                          fontSize: { xs: "0.875rem", md: "1rem" }
+                        }}>
                           {d.document_type || "Document"}
                         </Typography>
-                        <Typography variant="caption" sx={{ color: "#487F9A" }}>
+                        <Typography variant="caption" sx={{ 
+                          color: "#487F9A",
+                          fontSize: { xs: "0.75rem", md: "0.875rem" }
+                        }}>
                           {d.file_name || "—"} • {d.uploaded_at ? new Date(d.uploaded_at).toLocaleString("fr-FR") : "—"}
                         </Typography>
                       </Box>
@@ -1235,6 +1357,7 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                             borderWidth: 2,
                             borderColor: "#0B568C",
                             color: "#0B568C",
+                            fontSize: { xs: "0.75rem", md: "0.875rem" },
                             "&:hover": {
                               borderWidth: 2,
                               borderColor: "#0A345F",
@@ -1259,7 +1382,7 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                             sx={{
                               color: "#F44336",
                               fontWeight: 700,
-                              fontSize: "0.75rem",
+                              fontSize: { xs: "0.7rem", md: "0.75rem" },
                             }}
                           >
                             URL manquante
@@ -1282,15 +1405,17 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
               fontWeight: 700,
               backgroundColor: alpha("#0B568C", 0.05),
               border: `1px solid ${alpha("#0B568C", 0.2)}`,
+              fontSize: { xs: "0.875rem", md: "1rem" }
             }}
           >
             Si tu vois "endpoint manquant", ajoute côté backend: <b>GET /api/v1/admin/users/&lt;id&gt;/documents/</b>
           </Alert>
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
+        <DialogActions sx={{ px: { xs: 2, md: 3 }, py: 2 }}>
           <Button
             variant="outlined"
             onClick={() => setDocsOpen(false)}
+            size={isMobile ? "small" : "medium"}
             sx={{
               borderRadius: "50px",
               textTransform: "none",
@@ -1298,6 +1423,8 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
               borderWidth: 2,
               borderColor: "#0B568C",
               color: "#0B568C",
+              px: { xs: 2, md: 3 },
+              py: { xs: 0.5, md: 1 },
               "&:hover": {
                 borderWidth: 2,
                 borderColor: "#0A345F",
@@ -1311,17 +1438,24 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
       </Dialog>
 
       {/* Dialog validation KYC */}
-      <Dialog open={verifyOpen} onClose={() => setVerifyOpen(false)} maxWidth="xs" fullWidth>
+      <Dialog open={verifyOpen} onClose={() => setVerifyOpen(false)} maxWidth="xs" fullWidth fullScreen={isMobile}>
         <DialogTitle
           sx={{
             fontWeight: 900,
             color: "#1A4F75",
+            p: { xs: 2, md: 3 },
+            fontSize: { xs: "1rem", md: "1.25rem" }
           }}
         >
           Valider KYC/KYB
         </DialogTitle>
-        <DialogContent dividers>
-          <Typography variant="body2" sx={{ color: "#335F7A", fontWeight: 600, mb: 2 }}>
+        <DialogContent dividers sx={{ p: { xs: 2, md: 3 } }}>
+          <Typography variant="body2" sx={{ 
+            color: "#335F7A", 
+            fontWeight: 600, 
+            mb: 2,
+            fontSize: { xs: "0.875rem", md: "1rem" }
+          }}>
             Confirmer la validation pour <b>{verifyUser?.full_name || verifyUser?.username || ""}</b> ?
           </Typography>
 
@@ -1332,6 +1466,7 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
               fontWeight: 700,
               backgroundColor: alpha("#0B568C", 0.05),
               border: `1px solid ${alpha("#0B568C", 0.2)}`,
+              fontSize: { xs: "0.875rem", md: "1rem" }
             }}
           >
             Après validation, le statut devient <b>verified</b> et le badge devient vert.
@@ -1344,16 +1479,18 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
               fontWeight: 700,
               backgroundColor: alpha("#FF9800", 0.05),
               border: `1px solid ${alpha("#FF9800", 0.2)}`,
+              fontSize: { xs: "0.875rem", md: "1rem" }
             }}
           >
             Endpoint requis: <b>POST /api/v1/admin/users/&lt;id&gt;/verify_kyc/</b>
           </Alert>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ p: { xs: 2, md: 3 } }}>
           <Button
             variant="outlined"
             onClick={() => setVerifyOpen(false)}
             disabled={busy}
+            size={isMobile ? "small" : "medium"}
             sx={{
               borderRadius: "50px",
               textTransform: "none",
@@ -1361,6 +1498,8 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
               borderWidth: 2,
               borderColor: "#0B568C",
               color: "#0B568C",
+              px: { xs: 2, md: 3 },
+              py: { xs: 0.5, md: 1 },
               "&:hover": {
                 borderWidth: 2,
                 borderColor: "#0A345F",
@@ -1375,11 +1514,14 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
             variant="contained"
             onClick={doVerify}
             disabled={busy}
+            size={isMobile ? "small" : "medium"}
             sx={{
               borderRadius: "50px",
               textTransform: "none",
               fontWeight: 900,
               background: "linear-gradient(135deg, #0B568C 0%, #27B1E4 100%)",
+              px: { xs: 2, md: 3 },
+              py: { xs: 0.5, md: 1 },
               "&:hover": { transform: "translateY(-1px)" },
             }}
           >
@@ -1394,8 +1536,10 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
           open={true}
           autoHideDuration={5000}
           onClose={() => setToast(null)}
-          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-          sx={{ "& .MuiSnackbar-root": { bottom: { xs: 100, sm: 32 } } }}
+          anchorOrigin={{ vertical: "bottom", horizontal: isMobile ? "center" : "right" }}
+          sx={{ 
+            bottom: { xs: 90, md: 32 } // Éviter le bouton flottant sur mobile
+          }}
         >
           <Alert
             severity={toast.type}
@@ -1403,7 +1547,7 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
               borderRadius: 3,
               boxShadow: "0 20px 50px rgba(0,0,0,0.2)",
               fontWeight: 600,
-              fontSize: "0.95rem",
+              fontSize: { xs: "0.875rem", md: "0.95rem" },
               alignItems: "center",
               border: `1px solid ${
                 toast.type === "success"
@@ -1414,8 +1558,8 @@ const AdminUsersList = forwardRef<AdminUsersListHandle, Props>(function AdminUse
                   ? alpha("#FF9800", 0.2)
                   : alpha("#0B568C", 0.2)
               }`,
-              minWidth: 300,
-              "& .MuiAlert-icon": { fontSize: 28 },
+              minWidth: { xs: 280, md: 300 },
+              "& .MuiAlert-icon": { fontSize: { xs: 24, md: 28 } },
             }}
             elevation={12}
           >
