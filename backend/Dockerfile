@@ -13,7 +13,6 @@ ENV PYTHONUNBUFFERED=1 \
     DJANGO_SETTINGS_MODULE=seasky.settings
 
 # ✅ IMPORTANT: pas de "apt-get upgrade -y" (évite OOM/exit 137 sur Render)
-# ✅ IMPORTANT: pas de python3-dev (inutile avec python:3.12-slim, et très lourd)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       curl \
@@ -48,14 +47,15 @@ RUN mkdir -p /app/staticfiles /app/media /app/logs && \
     chown -R django:django /app/staticfiles /app/media /app/logs && \
     chmod -R 775 /app/staticfiles /app/media /app/logs
 
-# ✅ start.sh doit exister dans backend/ (même dossier que Dockerfile)
+# ✅ start.sh doit exister + être exécutable
 RUN test -f /app/start.sh && chmod +x /app/start.sh
 
 USER django
 
 EXPOSE 8000
 
+# ✅ Healthcheck dynamique (Render peut imposer un autre PORT)
 HEALTHCHECK --interval=30s --timeout=10s --retries=5 --start-period=60s \
-  CMD curl -fsS http://localhost:8000/api/health/ >/dev/null || exit 1
+  CMD curl -fsS "http://localhost:${PORT:-8000}/api/health/" >/dev/null || exit 1
 
 CMD ["/app/start.sh"]

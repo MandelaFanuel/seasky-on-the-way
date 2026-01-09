@@ -29,7 +29,7 @@ DATABASE_URL="$(echo "${DATABASE_URL:-}" | xargs || true)"
 : "${POSTGRES_PASSWORD:=414141}"
 
 # -------------------------------------------------------------------
-# ✅ Mode Render strict: DATABASE_URL obligatoire
+# ✅ Mode Render strict: DATABASE_URL recommandé (souvent obligatoire)
 # -------------------------------------------------------------------
 if [[ "$IS_RENDER" == "true" && -z "${DATABASE_URL}" ]]; then
   echo "❌ Render détecté mais DATABASE_URL est vide."
@@ -45,12 +45,14 @@ if [[ -n "${DATABASE_URL}" ]]; then
 else
   DB_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
 fi
-export DB_URL
 
-# Affiche un résumé DB_URL sans password
+# ✅ IMPORTANT: Django lit DATABASE_URL (pas DB_URL)
+export DATABASE_URL="${DB_URL}"
+
+# Affiche un résumé DATABASE_URL sans password
 python - <<'PY'
 import os
-u = (os.environ.get("DB_URL","") or "").strip()
+u = (os.environ.get("DATABASE_URL","") or "").strip()
 safe = u
 if "://" in u and "@" in u:
     proto, rest = u.split("://",1)
@@ -61,7 +63,9 @@ print("🔎 Debug env:")
 print("  • IS_RENDER =", "true" if (os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID")) else "false")
 print("  • RENDER_SERVICE_ID =", os.getenv("RENDER_SERVICE_ID","<empty>"))
 print("  • DATABASE_URL =", "***set***" if os.getenv("DATABASE_URL") else "<empty>")
-print("  • DB_URL =", safe if safe else "<empty>")
+print("  • DATABASE_URL(safe) =", safe if safe else "<empty>")
+print("  • PORT =", os.getenv("PORT","8000"))
+print("  • DJANGO_DEBUG =", os.getenv("DJANGO_DEBUG","<empty>"))
 PY
 
 echo ""
@@ -74,9 +78,9 @@ python - <<'PY'
 import os, sys, time
 import psycopg
 
-db_url = (os.environ.get("DB_URL") or "").strip()
+db_url = (os.environ.get("DATABASE_URL") or "").strip()
 if not db_url:
-    print("❌ DB_URL vide. Configure DATABASE_URL (Render) ou POSTGRES_* (local).")
+    print("❌ DATABASE_URL vide. Configure DATABASE_URL (Render) ou POSTGRES_* (local).")
     sys.exit(1)
 
 last_err = None
@@ -106,6 +110,74 @@ echo ""
 echo "📁 Collectstatic..."
 python manage.py collectstatic --noinput --clear || true
 
+# -------------------------------------------------------------------
+# ✅ Création automatique d'un superuser admin (Render-friendly)
+# -------------------------------------------------------------------
+# Utilisation:
+#   DJANGO_SUPERUSER_USERNAME=admin
+#   DJANGO_SUPERUSER_EMAIL=admin@seasky.bi
+#   DJANGO_SUPERUSER_PASSWORD=XXXX
+# Optionnel:
+#   DJANGO_SUPERUSER_CREATE=1  (si tu veux forcer)
+#
+# Comportement:
+# - crée le superuser seulement s'il n'existe pas
+# - ne casse pas le démarrage si variables absentes
+echo ""
+echo "👤 Vérification / création du Superuser (admin)..."
+
+python - <<'PY'
+import os
+import django
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", os.getenv("DJANGO_SETTINGS_MODULE","seasky.settings"))
+django.setup()
+
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+create_flag = (os.getenv("DJANGO_SUPERUSER_CREATE","") or "").strip().lower() in ("1","true","yes","on")
+username = (os.getenv("DJANGO_SUPERUSER_USERNAME","") or "").strip()
+email = (os.getenv("DJANGO_SUPERUSER_EMAIL","") or "").strip()
+password = (os.getenv("DJANGO_SUPERUSER_PASSWORD","") or "").strip()
+
+# On crée si:
+# - flag activé OU (en prod Render et variables fournies)
+is_render = bool(os.getenv("RENDER") or os.getenv("RENDER_SERVICE_ID"))
+should_try = create_flag or (is_render and username and password)
+
+if not should_try:
+    print("ℹ️ Superuser: non demandé (variables absentes ou flag non activé).")
+    raise SystemExit(0)
+
+if not username or not password:
+    print("⚠️ Superuser: DJANGO_SUPERUSER_USERNAME et DJANGO_SUPERUSER_PASSWORD requis.")
+    raise SystemExit(0)
+
+# Déjà existant ?
+existing = User.objects.filter(username=username).first()
+if existing:
+    # Optionnel: s'assurer qu'il est staff/superuser
+    changed = False
+    if not getattr(existing, "is_staff", False):
+        existing.is_staff = True
+        changed = True
+    if not getattr(existing, "is_superuser", False):
+        existing.is_superuser = True
+        changed = True
+    if changed:
+        existing.save(update_fields=["is_staff","is_superuser"])
+        print(f"✅ Superuser '{username}' déjà existant — droits renforcés (staff/superuser).")
+    else:
+        print(f"✅ Superuser '{username}' existe déjà.")
+    raise SystemExit(0)
+
+# Créer
+u = User.objects.create_superuser(username=username, email=email or None, password=password)
+print(f"✅ Superuser créé: {u.username}")
+PY
+
 echo ""
 echo "================================================"
 echo "🌐 Démarrage du serveur SeaSky"
@@ -126,8 +198,10 @@ else
     exec gunicorn seasky.wsgi:application \
       --bind 0.0.0.0:${PORT} \
       --workers "${WEB_CONCURRENCY:-1}" \
-      --threads 2 \
-      --timeout 120
+      --threads "${GUNICORN_THREADS:-2}" \
+      --timeout "${GUNICORN_TIMEOUT:-120}" \
+      --access-logfile "-" \
+      --error-logfile "-"
   else
     echo "⚠️ gunicorn introuvable, fallback runserver"
     exec python manage.py runserver 0.0.0.0:${PORT}
