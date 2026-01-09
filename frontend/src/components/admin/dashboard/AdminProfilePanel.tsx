@@ -8,7 +8,6 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import axios from "axios";
 
 import {
   Box,
@@ -49,12 +48,16 @@ import {
   Delete as DeleteIcon,
 } from "@mui/icons-material";
 
+// ✅ Import unique depuis le fichier API unifié
+import api, { apiMultipart, getMediaUrl } from "@/services/api";
+
 export type AdminProfilePanelHandle = {
   refresh: () => Promise<void>;
 };
 
 type Props = {
   onLoadingChange?: (loading: boolean) => void;
+  onProfileUpdate?: (adminData: AdminUser) => void; // ✅ Nouvelle prop pour remonter les données
 };
 
 type Snack = {
@@ -67,7 +70,7 @@ type AdminUser = {
   id?: number;
   username?: string;
   email?: string;
-  photo?: string; // Note: backend utilise "photo", pas "profile_picture"
+  photo?: string;
 
   // rôle / flags
   role?: string;
@@ -77,7 +80,7 @@ type AdminUser = {
   full_name?: string;
   phone?: string;
   gender?: string;
-  date_of_birth?: string; // YYYY-MM-DD
+  date_of_birth?: string;
   nationality?: string;
 
   kyc_status?: string;
@@ -96,26 +99,6 @@ function safeInitials(name?: string) {
     .join("");
 }
 
-function normalizeBaseUrl(input?: string) {
-  let url = (input ?? "").trim();
-  if (!url) return "";
-  url = url.replace(/\/+$/, "");
-  return url;
-}
-
-function getApiBase(): string {
-  const fromEnv =
-    (import.meta as any)?.env?.VITE_API_BASE_URL ||
-    (import.meta as any)?.env?.VITE_API_URL ||
-    "";
-  const base = normalizeBaseUrl(fromEnv);
-  return base || "http://localhost:8000/api/v1";
-}
-
-function getAccessToken(): string | null {
-  return localStorage.getItem("access") || localStorage.getItem("access_token") || null;
-}
-
 function toFrDateTime(input?: string) {
   if (!input) return "-";
   try {
@@ -125,33 +108,20 @@ function toFrDateTime(input?: string) {
   }
 }
 
-// Fonction pour obtenir l'URL complète de la photo de profil
-const getPhotoUrl = (photo?: string): string | null => {
-  if (!photo) return null;
-  
-  // Si c'est déjà une URL complète
-  if (photo.startsWith('http://') || photo.startsWith('https://')) {
-    return photo;
-  }
-  
-  // Si c'est un chemin relatif, ajouter la base URL
-  const baseUrl = getApiBase().replace('/api/v1', '');
-  return `${baseUrl}${photo.startsWith('/') ? '' : '/'}${photo}`;
-};
-
 const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function AdminProfilePanel(
-  { onLoadingChange },
+  { onLoadingChange, onProfileUpdate },
   ref
 ) {
   const theme = useTheme();
   const isMobile = useMediaQuery("(max-width:600px)");
-  const isTablet = useMediaQuery("(max-width:900px)");
 
-  // ✅ IMPORTANT: éviter le refetch infini causé par onLoadingChange inline du parent
   const onLoadingRef = useRef<Props["onLoadingChange"]>(onLoadingChange);
+  const onProfileUpdateRef = useRef<Props["onProfileUpdate"]>(onProfileUpdate);
+  
   useEffect(() => {
     onLoadingRef.current = onLoadingChange;
-  }, [onLoadingChange]);
+    onProfileUpdateRef.current = onProfileUpdate;
+  }, [onLoadingChange, onProfileUpdate]);
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -180,7 +150,6 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
     setSnack({ open: true, msg, severity });
   }, []);
 
-  // ✅ avoid setState after unmount
   const mountedRef = useRef(true);
   useEffect(() => {
     mountedRef.current = true;
@@ -191,38 +160,6 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const api = useMemo(() => {
-    const instance = axios.create({
-      baseURL: getApiBase(),
-      headers: { "Content-Type": "application/json" },
-      timeout: 15000,
-    });
-
-    instance.interceptors.request.use((config: any) => {
-      const token = getAccessToken();
-      if (token) config.headers.Authorization = `Bearer ${token}`;
-      return config;
-    });
-
-    return instance;
-  }, []);
-
-  const apiMultipart = useMemo(() => {
-    const instance = axios.create({
-      baseURL: getApiBase(),
-      headers: { "Content-Type": "multipart/form-data" },
-      timeout: 20000,
-    });
-
-    instance.interceptors.request.use((config: any) => {
-      const token = getAccessToken();
-      if (token) config.headers.Authorization = `Bearer ${token}`;
-      return config;
-    });
-
-    return instance;
-  }, []);
-
   const isAdmin = useMemo(() => {
     return Boolean(
       admin &&
@@ -232,7 +169,6 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
     );
   }, [admin]);
 
-  // ✅ Rôle affiché: basé sur flags admin (même si role DB est "client")
   const displayRole = useMemo(() => {
     if (!admin) return "admin";
     if (admin.is_superuser || admin.is_staff) return "admin";
@@ -269,7 +205,7 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
   const photoUrl = useMemo(() => {
     if (photoPreview) return photoPreview;
     if (admin?.photo) {
-      return getPhotoUrl(admin.photo);
+      return getMediaUrl(admin.photo);
     }
     return null;
   }, [admin?.photo, photoPreview]);
@@ -285,13 +221,18 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
   }, []);
 
   const fetchProfile = useCallback(async () => {
+    if (!mountedRef.current) return;
+    
     setLoading(true);
     onLoadingRef.current?.(true);
 
     const controller = new AbortController();
 
     try {
-      const res = await api.get("/me/profile/", { signal: controller.signal as any });
+      // ✅ CORRIGÉ : Utiliser le chemin correct
+      const res = await api.get("me/profile/", { 
+        signal: controller.signal as any 
+      });
       const data = (res?.data || {}) as AdminUser;
 
       if (!mountedRef.current) return;
@@ -299,25 +240,34 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
       setAdmin(data);
       fillFormFromAdmin(data);
       
-      // Réinitialiser la prévisualisation photo
+      // Notifier le parent des données du profil
+      onProfileUpdateRef.current?.(data);
+      
       setPhotoFile(null);
       setPhotoPreview(null);
     } catch (e: any) {
       if (!mountedRef.current) return;
-      const msg =
-        e?.response?.data?.detail ||
-        e?.response?.data?.message ||
-        (e?.code === "ECONNABORTED" ? "Timeout: le serveur ne répond pas (15s)" : "") ||
-        e?.message ||
-        "Impossible de charger le profil admin";
+      
+      let msg = "Impossible de charger le profil admin";
+      if (e.response) {
+        msg = e.response.data?.detail || 
+              e.response.data?.message || 
+              `Erreur ${e.response.status}`;
+      } else if (e.request) {
+        msg = "Aucune réponse du serveur. Vérifiez votre connexion.";
+      } else {
+        msg = e.message || msg;
+      }
+      
       showSnack(msg, "error");
       setAdmin(null);
     } finally {
-      if (!mountedRef.current) return;
-      setLoading(false);
-      onLoadingRef.current?.(false);
+      if (mountedRef.current) {
+        setLoading(false);
+        onLoadingRef.current?.(false);
+      }
     }
-  }, [api, fillFormFromAdmin, showSnack]);
+  }, [fillFormFromAdmin, showSnack]);
 
   useEffect(() => {
     fetchProfile();
@@ -329,7 +279,6 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
     },
   }));
 
-  // ✅ Auto-kyc verified pour admin : UNIQUEMENT si profil complet
   const didAutoVerifyRef = useRef(false);
   useEffect(() => {
     if (!admin) return;
@@ -347,14 +296,16 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
 
     (async () => {
       try {
-        await api.patch("/me/update_profile/", { kyc_status: "verified" });
+        await api.patch("me/update_profile/", { kyc_status: "verified" });
         if (!mountedRef.current) return;
-        setAdmin((p) => (p ? { ...p, kyc_status: "verified" } : p));
+        const updatedAdmin = { ...admin, kyc_status: "verified" };
+        setAdmin(updatedAdmin);
+        onProfileUpdateRef.current?.(updatedAdmin);
       } catch {
         // ignore
       }
     })();
-  }, [admin, api, isAdmin, profileComplete]);
+  }, [admin, isAdmin, profileComplete]);
 
   const handleStartEdit = () => {
     if (admin) fillFormFromAdmin(admin);
@@ -387,15 +338,13 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validation du type de fichier
     const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     if (!validTypes.includes(file.type)) {
       showSnack("Format de fichier non supporté. Utilisez JPEG, PNG, GIF ou WebP.", "error");
       return;
     }
 
-    // Validation de la taille (max 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
       showSnack("La taille de l'image ne doit pas dépasser 5MB.", "error");
       return;
@@ -403,7 +352,6 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
 
     setPhotoFile(file);
     
-    // Créer une prévisualisation
     const reader = new FileReader();
     reader.onloadend = () => {
       setPhotoPreview(reader.result as string);
@@ -428,12 +376,10 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
     try {
       const formData = new FormData();
 
-      // Ajouter la photo si une nouvelle a été sélectionnée
       if (photoFile) {
         formData.append('photo', photoFile);
       }
 
-      // Ajouter les autres informations du profil
       formData.append('full_name', form.full_name.trim());
       formData.append('phone', form.phone.trim());
       formData.append('gender', form.gender.trim());
@@ -444,35 +390,46 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
         formData.append('kyc_status', 'verified');
       }
 
-      // Utiliser PATCH avec FormData
-      const res = await apiMultipart.patch("/me/update_profile/", formData);
+      // ✅ CORRIGÉ : Utiliser le chemin correct
+      const res = await apiMultipart.patch("me/update_profile/", formData);
       const updated = (res?.data || {}) as AdminUser;
 
       if (!mountedRef.current) return;
 
-      setAdmin((p) => ({ 
-        ...(p || {}), 
+      const newAdminData = {
+        ...(admin || {}),
         ...updated,
         ...form,
-        photo: updated.photo || p?.photo
-      }));
+        photo: updated.photo || admin?.photo
+      };
       
+      setAdmin(newAdminData);
       setEditMode(false);
       setPhotoFile(null);
       setPhotoPreview(null);
       
+      // Notifier le parent de la mise à jour
+      onProfileUpdateRef.current?.(newAdminData);
+      
       showSnack("Profil mis à jour avec succès", "success");
     } catch (e: any) {
-      const msg =
-        e?.response?.data?.detail ||
-        e?.response?.data?.message ||
-        (e?.code === "ECONNABORTED" ? "Timeout: le serveur ne répond pas (15s)" : "") ||
-        e?.message ||
-        "Échec de la mise à jour du profil";
+      let msg = "Échec de la mise à jour du profil";
+      if (e.response) {
+        msg = e.response.data?.detail || 
+              e.response.data?.message || 
+              `Erreur ${e.response.status}`;
+      } else if (e.request) {
+        msg = "Aucune réponse du serveur. Vérifiez votre connexion.";
+      } else {
+        msg = e.message || msg;
+      }
+      
       showSnack(msg, "error");
     } finally {
-      setSaving(false);
-      onLoadingRef.current?.(false);
+      if (mountedRef.current) {
+        setSaving(false);
+        onLoadingRef.current?.(false);
+      }
     }
   };
 
@@ -740,7 +697,6 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
           </Alert>
         )}
 
-        {/* Input fichier caché pour la photo */}
         <input
           type="file"
           ref={fileInputRef}
@@ -773,7 +729,6 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
             </Typography>
 
             <Stack spacing={2}>
-              {/* Section Photo de profil en mode édition */}
               {editMode && (
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="subtitle2" sx={{ 
@@ -786,7 +741,7 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
                   </Typography>
                   <Stack direction={isMobile ? "column" : "row"} spacing={2} alignItems={isMobile ? "flex-start" : "center"}>
                     <Avatar
-                      src={photoPreview || getPhotoUrl(admin?.photo) || undefined}
+                      src={photoPreview || getMediaUrl(admin?.photo) || undefined}
                       sx={{ width: 64, height: 64 }}
                     >
                       {initials}
@@ -975,7 +930,7 @@ const AdminProfilePanel = forwardRef<AdminProfilePanelHandle, Props>(function Ad
         onClose={() => setSnack((p) => ({ ...p, open: false }))}
         anchorOrigin={{ vertical: "bottom", horizontal: isMobile ? "center" : "right" }}
         sx={{ 
-          bottom: { xs: 90, md: 24 } // Éviter le bouton flottant sur mobile
+          bottom: { xs: 90, md: 24 }
         }}
       >
         <Alert

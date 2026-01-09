@@ -20,6 +20,7 @@ import {
   ListItemText,
   Divider,
   ListItemButton,
+  Avatar,
 } from "@mui/material";
 import {
   AdminPanelSettings,
@@ -51,6 +52,9 @@ import OrdersDashboard, { OrdersDashboardHandle } from "../../components/admin/d
 import DriverRequestsDashboard, { DriverRequestsDashboardHandle } from "../../components/admin/drivers/DriverRequestsDashboard";
 import ReportsDashboard, { ReportsDashboardHandle } from "../../components/admin/dashboard/ReportsDashboard";
 
+// ✅ Import pour la gestion des URLs des médias
+import { getMediaUrl } from "@/services/api";
+
 type AdminTab =
   | "overview"
   | "profile"
@@ -62,6 +66,35 @@ type AdminTab =
   | "orders"
   | "driver_requests"
   | "reports";
+
+type AdminUser = {
+  id?: number;
+  username?: string;
+  email?: string;
+  photo?: string;
+  role?: string;
+  is_staff?: boolean;
+  is_superuser?: boolean;
+  full_name?: string;
+  phone?: string;
+  gender?: string;
+  date_of_birth?: string;
+  nationality?: string;
+  kyc_status?: string;
+  last_login_at?: string;
+  created_at?: string;
+};
+
+function safeInitials(name?: string) {
+  const n = (name || "").trim();
+  if (!n) return "A";
+  return n
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s.charAt(0).toUpperCase())
+    .join("");
+}
 
 export default function AdminDashboard() {
   const theme = useTheme();
@@ -87,6 +120,9 @@ export default function AdminDashboard() {
   const [lastScrollTop, setLastScrollTop] = useState(0);
   const [isHeaderExpanded, setIsHeaderExpanded] = useState(true);
   const [childLoading, setChildLoading] = useState(false);
+
+  // ✅ État pour stocker les données du profil admin
+  const [adminData, setAdminData] = useState<AdminUser | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -136,6 +172,27 @@ export default function AdminDashboard() {
     setActiveTab(tab);
     if (isMobile) setMobileMenuOpen(false);
   }, [isMobile]);
+
+  // ✅ Callback pour recevoir les données mises à jour du profil
+  const handleProfileUpdate = useCallback((data: AdminUser) => {
+    setAdminData(data);
+    // Stocker aussi dans localStorage pour persistance entre sessions
+    if (data) {
+      localStorage.setItem('admin_profile_data', JSON.stringify(data));
+    }
+  }, []);
+
+  // ✅ Charger les données du profil depuis localStorage au démarrage
+  useEffect(() => {
+    const savedData = localStorage.getItem('admin_profile_data');
+    if (savedData) {
+      try {
+        setAdminData(JSON.parse(savedData));
+      } catch (e) {
+        console.error("Erreur lors du parsing des données admin:", e);
+      }
+    }
+  }, []);
 
   const headerHeight = useMemo(() => {
     if (isMobile) return isHeaderExpanded ? 180 : 140;
@@ -189,6 +246,19 @@ export default function AdminDashboard() {
     { value: "reports", label: "Rapports", icon: <QueryStatsIcon /> },
   ], []);
 
+  // ✅ URL de la photo de profil
+  const adminPhotoUrl = useMemo(() => {
+    if (adminData?.photo) {
+      return getMediaUrl(adminData.photo);
+    }
+    return null;
+  }, [adminData?.photo]);
+
+  // ✅ Initiales pour l'avatar
+  const adminInitials = useMemo(() => {
+    return safeInitials(adminData?.full_name || adminData?.username);
+  }, [adminData]);
+
   // Mobile Menu Drawer
   const renderMobileMenu = () => (
     <Drawer
@@ -219,6 +289,32 @@ export default function AdminDashboard() {
       </Box>
       
       <List sx={{ p: 2 }}>
+        {/* Affichage de la photo dans le menu mobile */}
+        {adminData && (
+          <Box sx={{ mb: 3, p: 2, backgroundColor: alpha(theme.palette.primary.light, 0.05), borderRadius: 2, textAlign: 'center' }}>
+            <Avatar
+              src={adminPhotoUrl || undefined}
+              sx={{
+                width: 64,
+                height: 64,
+                margin: '0 auto 10px',
+                bgcolor: adminPhotoUrl ? "transparent" : theme.palette.primary.main,
+                color: "white",
+                fontWeight: 700,
+                fontSize: "1.5rem",
+              }}
+            >
+              {adminInitials}
+            </Avatar>
+            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 0.5 }}>
+              {adminData.full_name || "Administrateur"}
+            </Typography>
+            <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+              @{adminData.username || "admin"} • {adminData.role || "admin"}
+            </Typography>
+          </Box>
+        )}
+
         {/* Boutons d'action */}
         <Box sx={{ mb: 3, p: 2, backgroundColor: alpha(theme.palette.primary.light, 0.05), borderRadius: 2 }}>
           <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1, color: theme.palette.primary.dark }}>
@@ -371,28 +467,24 @@ export default function AdminDashboard() {
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, flexWrap: "wrap" }}>
-              {/* Logo et titre */}
+              {/* Logo, photo et titre */}
               <Stack direction="row" alignItems="center" spacing={2}>
-                <Box
+                {/* ✅ Avatar avec la photo de profil */}
+                <Avatar
+                  src={adminPhotoUrl || undefined}
                   sx={{
                     width: isHeaderExpanded ? { xs: 48, md: 56 } : { xs: 40, md: 48 },
                     height: isHeaderExpanded ? { xs: 48, md: 56 } : { xs: 40, md: 48 },
-                    borderRadius: isHeaderExpanded ? 3 : 2,
-                    backgroundColor: alpha(theme.palette.primary.main, isHeaderExpanded ? 0.1 : 0.08),
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
+                    bgcolor: adminPhotoUrl ? "transparent" : theme.palette.primary.main,
+                    color: "white",
+                    fontWeight: 700,
+                    fontSize: isHeaderExpanded ? { xs: "1.2rem", md: "1.4rem" } : { xs: "1rem", md: "1.2rem" },
+                    border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
                     transition: "all 0.3s ease",
                   }}
                 >
-                  <AdminPanelSettings
-                    sx={{
-                      fontSize: isHeaderExpanded ? { xs: 26, md: 32 } : { xs: 22, md: 26 },
-                      color: theme.palette.primary.main,
-                      transition: "all 0.3s ease",
-                    }}
-                  />
-                </Box>
+                  {adminInitials}
+                </Avatar>
 
                 <Box>
                   <Typography
@@ -420,6 +512,7 @@ export default function AdminDashboard() {
                     }}
                   >
                     Gestion système • Utilisateurs • PDV • Commandes • Rapports • Temps réel
+                    {adminData?.full_name && ` • Connecté: ${adminData.full_name}`}
                   </Typography>
                 </Box>
               </Stack>
@@ -496,7 +589,7 @@ export default function AdminDashboard() {
                       "&:hover": { transform: "translateY(-2px)" },
                       transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                     }}
-                  >
+                    >
                     Scanner
                   </Button>
                 </Box>
@@ -639,7 +732,13 @@ export default function AdminDashboard() {
             <RealtimeActivityDashboard ref={realtimeRef} onLoadingChange={(l) => setChildLoading(l)} mode="overview" />
           )}
 
-          {activeTab === "profile" && <AdminProfilePanel ref={profileRef} onLoadingChange={(l) => setChildLoading(l)} />}
+          {activeTab === "profile" && (
+            <AdminProfilePanel 
+              ref={profileRef} 
+              onLoadingChange={(l) => setChildLoading(l)} 
+              onProfileUpdate={handleProfileUpdate} // ✅ Passage du callback
+            />
+          )}
 
           {activeTab === "users" && <AdminUsersList ref={usersRef} onLoadingChange={(l) => setChildLoading(l)} />}
 
