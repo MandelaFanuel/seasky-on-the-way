@@ -7,13 +7,16 @@
   "routes": [
     { "handle": "filesystem" },
 
-    { "src": "/api/v1/(.*)", "dest": "https://seasky-backend.onrender.com/api/v1/$1" },
+    { "src": "^/images/(.*)$", "dest": "/images/$1" },
+    { "src": "^/logos/(.*)$", "dest": "/logos/$1" },
+    { "src": "^/assets/(.*)$", "dest": "/assets/$1" },
 
-    { "src": "/api/(.*)", "dest": "https://seasky-backend.onrender.com/api/v1/$1" },
+    { "src": "^/api/v1/(.*)$", "dest": "https://seasky-backend.onrender.com/api/v1/$1" },
+    { "src": "^/api/(.*)$", "dest": "https://seasky-backend.onrender.com/api/v1/$1" },
 
-    { "src": "/media/(.*)", "dest": "https://seasky-backend.onrender.com/media/$1" },
-    { "src": "/static/(.*)", "dest": "https://seasky-backend.onrender.com/static/$1" },
+    { "src": "^/media/(.*)$", "dest": "https://seasky-backend.onrender.com/media/$1" },
+    { "src": "^/static/(.*)$", "dest": "https://seasky-backend.onrender.com/static/$1" },
 
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "^/(.*)$", "dest": "/index.html" }
   ]
 }
