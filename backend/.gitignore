@@ -1,0 +1,18 @@
+# env
+.env
+.env.*
+!.env.example
+
+# python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# logs
+logs/
+*.log
+
+# local stuff
+.DS_Store
+.idea/
+.vscode/
