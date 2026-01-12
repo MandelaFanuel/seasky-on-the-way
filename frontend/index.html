@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>SeaSky On The Way</title>
 
-    <!-- Favicon (affiché dans l'onglet / à gauche du titre) -->
-    <!-- Le fichier doit être accessible à /logos/seaskyLogo1.png en production -->
-    <link rel="icon" type="image/png" href="/logos/seaskyLogo1.png" />
-    <!-- Optionnel: icône large Apple touch -->
-    <link rel="apple-touch-icon" href="/logos/seaskyLogo1.png" />
+    <!-- ✅ PWA -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0B568C" />
+
+    <!-- ✅ Favicons / Apple -->
+    <link rel="icon" type="image/png" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
   </head>
   <body class="bg-slate-50">
     <div id="root"></div>

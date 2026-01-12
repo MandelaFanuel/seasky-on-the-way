@@ -1,3 +1,4 @@
+// ========================= src/main.tsx =========================
 import * as React from "react";
 import * as ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
@@ -5,6 +6,9 @@ import { Provider } from "react-redux";
 import { store } from "./store/store";
 import App from "./App";
 import "./styles/index.css";
+
+// ✅ Active la logique PWA (install + updates)
+import "./pwa/pwa";
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },

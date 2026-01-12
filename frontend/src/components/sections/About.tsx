@@ -1,11 +1,13 @@
 // ========================= src/components/sections/About.tsx =========================
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Container from "../../components/layout/Container";
 import SectionTitle from "../../components/layout/SectionTitle";
 import { Link } from "react-router-dom";
+import PartnersSection from "./PartnersSection";
 
 const About: React.FC = () => {
   const [pageReady, setPageReady] = useState(false);
+  const [activeTimeline, setActiveTimeline] = useState(0);
 
   useEffect(() => {
     const t = window.setTimeout(() => setPageReady(true), 170);
@@ -15,7 +17,7 @@ const About: React.FC = () => {
   const values = [
     {
       icon: (
-        <svg className="h-6 w-6 text-[#0B568C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="h-6 w-6 text-[#0B568C]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -29,7 +31,7 @@ const About: React.FC = () => {
     },
     {
       icon: (
-        <svg className="h-6 w-6 text-[#0B568C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="h-6 w-6 text-[#0B568C]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -43,7 +45,7 @@ const About: React.FC = () => {
     },
     {
       icon: (
-        <svg className="h-6 w-6 text-[#0B568C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="h-6 w-6 text-[#0B568C]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -57,7 +59,7 @@ const About: React.FC = () => {
     },
     {
       icon: (
-        <svg className="h-6 w-6 text-[#0B568C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="h-6 w-6 text-[#0B568C]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -71,196 +73,235 @@ const About: React.FC = () => {
     },
   ];
 
-  const partners = [
-    { name: "Fanuel", image: "/images/partenaires/Fanuel2.jpg", category: "Distribution", since: "2015", verified: true },
-    { name: "Maison Médicale", image: "/images/partenaires/MaisonMedicale.jpg", category: "Santé & Nutrition", since: "2018", verified: true },
-    { name: "Polyclinique Muyinga", image: "/images/partenaires/PollyclinicMuyinga.jpg", category: "Santé & Bien-être", since: "2019", verified: false },
-    { name: "Roi Khaled", image: "/images/partenaires/RoisKhaled.jpg", category: "Commerce", since: "2016", verified: true },
-    { name: "Shem", image: "/images/partenaires/shem4.jpg", category: "Distribution", since: "2020", verified: false },
-    { name: "Pharmacie Umuco", image: "/images/partenaires/shem4.jpg", category: "Santé", since: "2021", verified: true },
-    { name: "Supermarké Tujenge", image: "/images/partenaires/shem4.jpg", category: "Commerce", since: "2017", verified: true },
+  const historyMilestones = [
+    {
+      year: "2010",
+      title: "Fondation de SeaSky Lait",
+      description: "Création de la laiterie familiale à Bujumbura avec une production artisanale de lait frais.",
+      highlight: "Début avec 5 éleveurs partenaires",
+    },
+    {
+      year: "2013",
+      title: "Première Certification de Qualité",
+      description: "Obtention de la certification ISO 22000 pour les normes de sécurité alimentaire.",
+      highlight: "Investissement en équipement moderne",
+    },
+    {
+      year: "2015",
+      title: "Expansion Régionale",
+      description: "Ouverture de 3 nouveaux centres de distribution à Gitega, Ngozi et Muyinga.",
+      highlight: "+200% de croissance des ventes",
+    },
+    {
+      year: "2018",
+      title: "Innovation Technologique",
+      description: "Lancement de la plateforme numérique et intégration des paiements mobiles.",
+      highlight: "Première transaction blockchain",
+    },
+    {
+      year: "2021",
+      title: "Développement Durable",
+      description: "Mise en place du programme d'économie circulaire avec les éleveurs locaux.",
+      highlight: "Réduction de 40% de l'empreinte carbone",
+    },
+    {
+      year: "2023",
+      title: "Excellence Internationale",
+      description: "Reconnaissance par le Prix Africain de l'Innovation Agricole.",
+      highlight: "Exportation vers 3 pays voisins",
+    },
   ];
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  const scroll = (direction: "left" | "right") => {
-    if (scrollContainerRef.current) {
-      const scrollAmount = 400;
-      scrollContainerRef.current.scrollBy({
-        left: direction === "left" ? -scrollAmount : scrollAmount,
-        behavior: "smooth",
-      });
-    }
-  };
-
   return (
-    <section id="about" className="py-20 bg-linear-to-b from-white to-[#E4F5FB] relative">
-      {/* overlay loading */}
-      <div
-        className={`pointer-events-none absolute inset-0 z-10 flex items-center justify-center transition-all duration-500 ${
-          pageReady ? "opacity-0" : "opacity-100"
-        }`}
-      >
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl px-6 py-4 border border-white shadow-lg">
-          <div className="flex items-center gap-3">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#0B568C]" />
-            <span className="text-sm text-[#0B568C] font-semibold">Chargement...</span>
+    <section id="about" className="relative py-20 bg-gradient-to-b from-white to-[#E4F5FB]">
+      {!pageReady && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-sm">
+          <div className="flex items-center gap-3 bg-white px-6 py-4 rounded-2xl shadow-lg">
+            <div className="animate-spin h-6 w-6 border-b-2 border-[#0B568C] rounded-full" />
+            <span className="text-sm font-semibold text-[#0B568C]">Chargement…</span>
           </div>
         </div>
-      </div>
+      )}
 
       <Container>
         <div className={`transition-all duration-700 ${pageReady ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"}`}>
-          <SectionTitle
-            kicker="Notre Histoire"
-            title="SeaSky Lait : Excellence Depuis 2010"
-            subtitle="Découvrez l'histoire passionnante de notre entreprise familiale et notre engagement pour la qualité"
-            centered
-          />
-
-          {/* ✅ ... (ton contenu principal conservé) */}
-          {/* ✅ Valeurs */}
-          <div className="mb-20">
-            <SectionTitle
-              kicker="Nos Valeurs"
-              title="Ce Qui Nous Rend Unique"
-              subtitle="Les principes fondamentaux qui guident chacune de nos actions"
-              centered
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {values.map((value, index) => (
-                <div
-                  key={index}
-                  className="text-center p-8 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-[#E4F5FB] hover:border-[#27B1E4]"
-                >
-                  <div className="w-16 h-16 bg-[#E4F5FB] rounded-full flex items-center justify-center mx-auto mb-6">
-                    {value.icon}
-                  </div>
-                  <h3 className="text-xl font-semibold text-[#1A4F75] mb-4">{value.title}</h3>
-                  <p className="text-[#335F7A]">{value.description}</p>
-                </div>
-              ))}
+          {/* SECTION HISTORIQUE AVEC IMAGE ULTRA-PROFESSIONNELLE */}
+          <div className="mb-20 animate-fade-in-up">
+            <div className="block lg:hidden mb-8">
+              <SectionTitle
+                kicker="Notre Histoire"
+                title="SeaSky Lait : Excellence Depuis 2010"
+                subtitle="Découvrez l'histoire passionnante de notre entreprise familiale et notre engagement pour la qualité"
+                centered={false}
+              />
             </div>
-          </div>
 
-          {/* ✅ Partenaires */}
-          <div className="mb-20">
-            <SectionTitle
-              kicker="Nos Partenaires"
-              title="Ils Nous Font Confiance"
-              subtitle="Des collaborations solides avec des acteurs clés du marché"
-              centered
-            />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div className="relative">
+                <div className="relative overflow-hidden rounded-3xl shadow-2xl group">
+                  <div className="relative h-[520px] sm:h-[550px] w-full overflow-hidden">
+                    <img
+                      src="/images/House.jpg"
+                      alt="Siège Social SeaSky Lait - Bujumbura, Burundi"
+                      className="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out"
+                      loading="eager"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-transparent" />
+                  </div>
 
-            <div className="relative mt-12">
-              <div className="flex justify-between items-center absolute top-1/2 left-0 right-0 transform -translate-y-1/2 z-10 pointer-events-none">
-                <button
-                  onClick={() => scroll("left")}
-                  className="h-10 w-10 rounded-full bg-white shadow-lg flex items-center justify-center text-[#0B568C] hover:bg-[#0B568C] hover:text-white transition-all duration-300 ml-2 pointer-events-auto transform hover:scale-110"
-                >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => scroll("right")}
-                  className="h-10 w-10 rounded-full bg-white shadow-lg flex items-center justify-center text-[#0B568C] hover:bg-[#0B568C] hover:text-white transition-all duration-300 mr-2 pointer-events-auto transform hover:scale-110"
-                >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </div>
-
-              <div
-                ref={scrollContainerRef}
-                className="flex overflow-x-auto pb-8 snap-x snap-mandatory scrollbar-hide space-x-4 px-4"
-                style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-              >
-                {partners.map((partner, index) => (
-                  <div key={index} className="snap-start shrink-0 w-56">
-                    <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden h-full flex flex-col transform hover:-translate-y-1">
-                      <div className="h-32 bg-linear-to-br from-[#0B568C] to-[#1A4F75] flex items-center justify-center p-4 relative overflow-hidden">
-                        {partner.verified && (
-                          <div className="absolute top-2 right-2 bg-white p-1 rounded-full shadow-md">
-                            <svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                  <div className="absolute left-0 right-0 bottom-0">
+                    <div className="mx-0">
+                      <div className="bg-white/95 backdrop-blur-sm shadow-xl px-5 py-4 sm:px-6 sm:py-5">
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 bg-gradient-to-br from-[#0B568C] to-[#1A4F75] rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                              />
                             </svg>
                           </div>
-                        )}
-                        <div className="relative z-10 p-2 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
-                          <img src={partner.image} alt={partner.name} className="h-14 w-auto object-contain" />
-                        </div>
-                      </div>
-
-                      <div className="p-4 grow flex flex-col">
-                        <div className="mb-3">
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center">
-                              <h3 className="font-semibold text-[#1A4F75] text-sm mr-1">{partner.name}</h3>
-                              {partner.verified && (
-                                <div className="text-green-500">
-                                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                                  </svg>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <p className="text-xs text-[#5C7C95] bg-[#E4F5FB] px-2 py-1 rounded-md inline-block">
-                            {partner.category}
-                          </p>
-                        </div>
-
-                        <div className="mt-auto pt-2 border-t border-gray-100">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center text-xs text-[#5C7C95]">
-                              <svg className="h-3 w-3 text-[#0B568C] mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path
-                                  fillRule="evenodd"
-                                  d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
-                                  clipRule="evenodd"
-                                />
-                              </svg>
-                              <span>Partenaire depuis {partner.since}</span>
-                            </div>
-
-                            <div className="text-[#0B568C] hover:text-[#1A4F75] transition-colors duration-300">
-                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m-6-6L10 14" />
-                              </svg>
-                            </div>
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-[#1A4F75] text-lg leading-tight">Siège Principal</h4>
+                            <p className="text-[#5C7C95] text-sm leading-tight">Bujumbura, Burundi</p>
+                            <p className="text-[#335F7A] text-xs mt-1">Fondé en 2010 • 14 ans d&apos;excellence</p>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                ))}
+                </div>
+
+                <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    { value: "14+", label: "Années d'expérience", color: "from-[#0B568C] to-[#1A4F75]" },
+                    { value: "500+", label: "Éleveurs partenaires", color: "from-emerald-600 to-emerald-400" },
+                    { value: "50K+", label: "Clients satisfaits", color: "from-amber-600 to-amber-400" },
+                    { value: "15+", label: "Produits innovants", color: "from-violet-600 to-violet-400" },
+                  ].map((stat, index) => (
+                    <div key={index} className="bg-white rounded-xl p-4 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
+                      <div className={`text-2xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`}>{stat.value}</div>
+                      <div className="text-sm text-[#5C7C95] mt-1 font-medium">{stat.label}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              {/* ✅ Bouton partenaire -> /register */}
-              <div className="text-center mt-12">
-                <p className="text-[#5C7C95] text-sm mb-6 font-light">Rejoignez notre réseau de partenaires privilégiés</p>
-                <Link
-                  to="/register"
-                  className="inline-flex items-center justify-center bg-linear-to-r from-[#0B568C] to-[#1A4F75] hover:from-[#1A4F75] hover:to-[#0B568C] text-white font-semibold py-3 px-6 rounded-full transition-all duration-300 transform hover:-translate-y-1 shadow-lg hover:shadow-xl group max-w-xs mx-auto"
-                >
-                  Devenir Partenaire
-                  <svg className="ml-2 h-4 w-4 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </Link>
+              <div>
+                <div className="hidden lg:block">
+                  <SectionTitle
+                    kicker="Notre Histoire"
+                    title="SeaSky Lait : Excellence Depuis 2010"
+                    subtitle="Découvrez l'histoire passionnante de notre entreprise familiale et notre engagement pour la qualité"
+                    centered={false}
+                  />
+                </div>
+
+                <div className="mt-8 space-y-6 text-[#335F7A]">
+                  <p className="text-lg leading-relaxed">
+                    Fondée en 2010 par la famille Ndayishimiye, <span className="font-semibold text-[#1A4F75]">SeaSky Lait</span> est née d&apos;une vision simple mais ambitieuse :
+                    démocratiser l&apos;accès à des produits laitiers de qualité exceptionnelle tout en valorisant le savoir-faire des éleveurs burundais.
+                  </p>
+
+                  <p className="leading-relaxed">
+                    De notre modeste atelier artisanal au cœur de Bujumbura, nous avons construit une entreprise qui allie <span className="font-semibold">traditions ancestrales</span> et
+                    <span className="font-semibold"> innovations modernes</span>. Chaque bouteille de lait, chaque pot de yaourt porte l&apos;ADN de notre engagement : qualité, authenticité et responsabilité sociale.
+                  </p>
+
+                  <div className="bg-[#E4F5FB] p-6 rounded-2xl border-l-4 border-[#0B568C]">
+                    <h4 className="font-bold text-[#1A4F75] mb-2">Notre Mission</h4>
+                    <p className="text-[#335F7A]">
+                      Transformer le secteur laitier burundais par l&apos;excellence opérationnelle, l&apos;innovation technologique et un impact social positif, en créant une chaîne de valeur durable qui bénéficie à tous : des éleveurs aux consommateurs.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-12">
+                  <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-[#0B568C]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Notre Parcours
+                  </h3>
+
+                  <div className="flex overflow-x-auto pb-2 mb-4 gap-2 mobile-optimized-scroll">
+                    {historyMilestones.map((milestone, index) => (
+                      <button
+                        key={milestone.year}
+                        onClick={() => setActiveTimeline(index)}
+                        className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 whitespace-nowrap ${
+                          activeTimeline === index ? "bg-[#0B568C] text-white shadow-md" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                      >
+                        {milestone.year}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="bg-white rounded-xl p-5 shadow-lg border border-gray-100 animate-fadeIn">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-[#0B568C] to-[#1A4F75] rounded-xl flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-bold text-sm">{historyMilestones[activeTimeline].year}</span>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-gray-900 text-base">{historyMilestones[activeTimeline].title}</h4>
+                        <p className="text-gray-600 text-sm mt-1">{historyMilestones[activeTimeline].description}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full" />
+                      <span className="text-sm text-green-600 font-medium">{historyMilestones[activeTimeline].highlight}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
+            </div>
+          </div>
+
+          {/* VALEURS */}
+          <div className="my-20">
+            <SectionTitle kicker="Nos Valeurs" title="Ce Qui Nous Rend Unique" centered />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {values.map((v, i) => (
+                <div key={i} className="bg-white p-8 rounded-2xl shadow-lg text-center transition hover:shadow-xl">
+                  <div className="w-16 h-16 mx-auto mb-6 bg-[#E4F5FB] rounded-full flex items-center justify-center">{v.icon}</div>
+                  <h3 className="text-xl font-semibold text-[#1A4F75] mb-3">{v.title}</h3>
+                  <p className="text-[#335F7A]">{v.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* PARTENAIRES (séparé en composant, même rendu/comportement) */}
+          <PartnersSection pageReady={pageReady} />
+
+          {/* CTA FINAL */}
+          <div className="bg-gradient-to-r from-[#0B568C] to-[#1A4F75] rounded-3xl p-12 text-center text-white animate-fade-in-up">
+            <h3 className="text-2xl font-bold mb-4">Prêt à découvrir notre gamme complète ?</h3>
+            <p className="mb-8 text-white/90 max-w-2xl mx-auto">
+              Des produits laitiers frais, de qualité supérieure, directement de nos éleveurs partenaires à votre table.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                to="/products"
+                className="inline-flex items-center justify-center bg-white text-[#0B568C] px-8 py-3 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+              >
+                Voir nos produits
+              </Link>
+              <Link
+                to="/contact"
+                className="inline-flex items-center justify-center border-2 border-white text-white px-8 py-3 rounded-xl font-semibold hover:bg-white/10 transition-colors"
+              >
+                Nous contacter
+              </Link>
             </div>
           </div>
         </div>
       </Container>
-
-      <style>{`
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
     </section>
   );
 };

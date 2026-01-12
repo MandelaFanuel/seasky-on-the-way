@@ -11,6 +11,9 @@ import { logoutUser } from "../../api/client";
 // ✅ Couleurs & gradients SeaSky (THEME GLOBAL)
 import { SeaSkyColors, SeaSkyGradients } from "../../styles/colors";
 
+// ✅ PWA install button helpers
+import { canInstallApp, installApp } from "../../pwa/pwa";
+
 // ------------------------- helpers -------------------------
 function toStr(v: any, fallback = ""): string {
   if (v === undefined || v === null) return fallback;
@@ -43,6 +46,9 @@ const Navigation: React.FC = () => {
 
   // ✅ Scroll direction logic
   const [showDashboardBar, setShowDashboardBar] = useState(false);
+
+  // ✅ PWA install button
+  const [showInstallBtn, setShowInstallBtn] = useState<boolean>(() => canInstallApp());
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -143,6 +149,28 @@ const Navigation: React.FC = () => {
       (e.currentTarget as HTMLElement).style.color = SeaSkyColors.inkBlue;
       (e.currentTarget as HTMLElement).style.backgroundColor = "transparent";
     },
+  };
+
+  // ✅ PWA: écouter quand le navigateur rend l'installation possible
+  useEffect(() => {
+    const onInstallable = (e: any) => {
+      setShowInstallBtn(!!e?.detail?.canInstall);
+    };
+
+    // état initial
+    setShowInstallBtn(canInstallApp());
+
+    window.addEventListener("seasky:pwa-installable", onInstallable as any);
+    return () => window.removeEventListener("seasky:pwa-installable", onInstallable as any);
+  }, []);
+
+  const handleInstall = async () => {
+    try {
+      await installApp();
+    } finally {
+      // On referme le menu mobile si ouvert
+      closeMenu();
+    }
   };
 
   // Fermer les menus au clic en dehors (desktop)
@@ -330,10 +358,6 @@ const Navigation: React.FC = () => {
               <img src={logo} alt="SeaSky Logo" className="w-full h-full object-contain" />
             </div>
 
-            {/* ✅ FIX: Ne plus cacher le titre en responsive
-                - Avant: hidden sm:block (caché sur xs)
-                - Maintenant: block (toujours visible) + tailles adaptées + truncate si nécessaire
-            */}
             <div className="block min-w-0">
               <p
                 className="text-[11px] sm:text-xs font-medium leading-tight truncate"
@@ -457,6 +481,27 @@ const Navigation: React.FC = () => {
                 </svg>
                 Contact
               </a>
+
+              {/* ✅ Bouton Installer (PWA) - n'apparaît que si dispo */}
+              {showInstallBtn && (
+                <button
+                  type="button"
+                  onClick={handleInstall}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full shadow-lg hover:shadow-xl transition border"
+                  style={{
+                    background: SeaSkyGradients.primary,
+                    color: "#fff",
+                    borderColor: "rgba(255,255,255,0.35)",
+                  }}
+                  aria-label="Installer l'application SeaSky"
+                  title="Installer SeaSky"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v10m0 0l3-3m-3 3l-3-3M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+                  </svg>
+                  Installer
+                </button>
+              )}
 
               {/* Icône panier */}
               <Link
@@ -691,6 +736,25 @@ const Navigation: React.FC = () => {
                   </svg>
                   Contact
                 </a>
+
+                {/* ✅ Bouton Installer (Mobile) */}
+                {showInstallBtn && (
+                  <button
+                    type="button"
+                    onClick={handleInstall}
+                    className="flex items-center gap-3 font-medium py-2 px-2 rounded-lg transition-colors w-full text-left"
+                    style={{
+                      color: "#fff",
+                      background: SeaSkyGradients.primary,
+                    }}
+                    aria-label="Installer l'application SeaSky"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v10m0 0l3-3m-3 3l-3-3M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+                    </svg>
+                    Installer l&apos;app
+                  </button>
+                )}
 
                 {/* Panier mobile */}
                 <Link
